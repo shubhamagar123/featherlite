@@ -1,0 +1,9 @@
+export { UserRepository } from './user.repository';
+export { CompanionRepository } from './companion.repository';
+export { RelationshipRepository } from './relationship.repository';
+export { WorldRepository } from './world.repository';
+export { ConversationRepository } from './conversation.repository';
+export { MessageRepository } from './message.repository';
+export { MemoryRepository } from './memory.repository';
+export { MomentRepository } from './moment.repository';
+export { NotificationRepository } from './notification.repository';
