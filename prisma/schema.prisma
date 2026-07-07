@@ -7,5 +7,1089 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Schema will be populated in Step 3+
-// This is a placeholder to allow `prisma generate` to work
+// ============================================================================
+// ENUMS - Status and type definitions
+// ============================================================================
+
+enum UserRole {
+  ADMIN
+  USER
+  MODERATOR
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum CompanionStatus {
+  ACTIVE
+  ARCHIVED
+  DELETED
+}
+
+enum RelationshipLevel {
+  STRANGER
+  ACQUAINTANCE
+  FRIEND
+  CLOSE_FRIEND
+  BEST_FRIEND
+  INTIMATE
+}
+
+enum RelationshipStatus {
+  ACTIVE
+  PAUSED
+  ENDED
+}
+
+enum ConversationStatus {
+  ACTIVE
+  ARCHIVED
+  DELETED
+}
+
+enum MessageRole {
+  USER
+  COMPANION
+  SYSTEM
+}
+
+enum MessageStatus {
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum MemoryType {
+  EPISODIC
+  SEMANTIC
+  PROCEDURAL
+}
+
+enum MemoryImportance {
+  TRIVIAL
+  MINOR
+  MODERATE
+  SIGNIFICANT
+  CRITICAL
+}
+
+enum MomentType {
+  FIRST_MEETING
+  MILESTONE_REACHED
+  EMOTIONAL_CONNECTION
+  ACHIEVEMENT
+  MEMORY_FORMED
+  ANNIVERSARY
+  SIGNIFICANT_CONVERSATION
+}
+
+enum MomentCategory {
+  RELATIONSHIP
+  ACHIEVEMENT
+  MEMORY
+  CONVERSATION
+  EVENT
+  CUSTOM
+}
+
+enum NotificationChannel {
+  PUSH
+  EMAIL
+  IN_APP
+}
+
+enum NotificationStatus {
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum NotificationType {
+  COMPANION_MESSAGE
+  REMINDER
+  MILESTONE
+  SYSTEM
+  CUSTOM
+}
+
+enum ActivityStatus {
+  AVAILABLE
+  UNAVAILABLE
+  RESTRICTED
+}
+
+enum ActivityType {
+  CONVERSATION
+  GAME
+  EXERCISE
+  LEARNING
+  CREATIVE
+  RELAXATION
+  SOCIAL
+  CUSTOM
+}
+
+enum WeatherCondition {
+  CLEAR
+  CLOUDY
+  RAINY
+  SNOWY
+  STORMY
+  FOGGY
+  WINDY
+}
+
+enum SceneType {
+  INDOOR
+  OUTDOOR
+  ABSTRACT
+  FANTASY
+  SCI_FI
+  CUSTOM
+}
+
+enum VoiceSessionStatus {
+  INITIATED
+  CONNECTING
+  ACTIVE
+  ENDED
+  FAILED
+}
+
+enum VoiceSessionType {
+  CALL
+  MESSAGE
+  TRANSCRIPTION
+}
+
+enum DeviceType {
+  MOBILE
+  DESKTOP
+  TABLET
+  WEARABLE
+  WEB
+}
+
+enum DeviceStatus {
+  ACTIVE
+  INACTIVE
+  DISABLED
+}
+
+// ============================================================================
+// USERS TABLE
+// Purpose: Stores user account information and authentication details.
+// Scalability: Indexed on email for auth lookup. partition by status for analytics.
+// ============================================================================
+
+model User {
+  id String @id @default(cuid())
+
+  // Auth & Identity
+  email String @unique
+  username String @unique
+  passwordHash String?
+  firebaseUid String? @unique
+
+  // Profile
+  firstName String?
+  lastName String?
+  avatar String? // S3 URL
+  bio String? @db.Text
+  role UserRole @default(USER)
+  status UserStatus @default(ACTIVE)
+
+  // Settings & Preferences
+  preferredLanguage String @default("en")
+  timezone String?
+  notificationsEnabled Boolean @default(true)
+  emailNotificationsEnabled Boolean @default(true)
+  pushNotificationsEnabled Boolean @default(true)
+  privacyLevel String @default("friends") // public, friends, private
+
+  // Relationships
+  companions Companion[]
+  relationships Relationship[]
+  conversations Conversation[]
+  messages Message[]
+  memories Memory[]
+  moments Moment[]
+  notifications Notification[]
+  devices Device[]
+  voiceSessions VoiceSession[]
+  analyticsEvents AnalyticsEvent[]
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastLoginAt DateTime?
+  deletedAt DateTime? // Soft delete
+
+  @@index([email])
+  @@index([username])
+  @@index([firebaseUid])
+  @@index([status])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+// ============================================================================
+// COMPANIONS TABLE
+// Purpose: Stores AI companion profiles and configurations.
+// Scalability: Indexed on userId for quick lookups. status for filtering.
+// Relationships: One user can have many companions. Companions are unique per user.
+// ============================================================================
+
+model Companion {
+  id String @id @default(cuid())
+
+  // Ownership & Identity
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Profile
+  name String
+  description String? @db.Text
+  avatar String? // S3 URL
+  personality String? @db.Text // JSON describing personality traits
+  background String? @db.Text // Companion backstory
+
+  // Configuration
+  status CompanionStatus @default(ACTIVE)
+  version Int @default(1) // For model versioning
+  aiModel String @default("gpt-4") // LLM model being used
+  systemPrompt String? @db.Text // Custom system prompt
+
+  // State & Stats
+  totalConversations Int @default(0)
+  totalMessages Int @default(0)
+  affectionLevel Float @default(0) // -100 to 100
+  engagementScore Float @default(0.5) // 0 to 1
+
+  // Relationships
+  relationships Relationship[]
+  conversations Conversation[]
+  memories Memory[]
+  moments Moment[]
+  activities CompanionActivity[]
+  outfits Outfit[]
+  worldState WorldState?
+  voiceSessions VoiceSession[]
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastInteractionAt DateTime?
+  deletedAt DateTime? // Soft delete
+
+  @@unique([userId, name]) // User can't have duplicate companion names
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([lastInteractionAt])
+  @@index([deletedAt])
+}
+
+// ============================================================================
+// RELATIONSHIPS TABLE
+// Purpose: Tracks the relationship state between users and their companions.
+// Scalability: Indexed on userId and companionId for efficient lookups.
+// Relationships: Many-to-many between users and companions.
+// ============================================================================
+
+model Relationship {
+  id String @id @default(cuid())
+
+  // Foreign Keys
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  companionId String
+  companion Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
+
+  // Relationship State
+  status RelationshipStatus @default(ACTIVE)
+  level RelationshipLevel @default(STRANGER)
+  affectionScore Float @default(0) // -100 to 100
+  trustScore Float @default(0) // 0 to 100
+  familiarityScore Float @default(0) // 0 to 100
+
+  // Tracking
+  firstInteractionAt DateTime?
+  lastInteractionAt DateTime?
+  totalInteractions Int @default(0)
+
+  // Metadata
+  notes String? @db.Text
+  tags String? // JSON array of tags
+  customData String? @db.Text // JSON for extension
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime? // Soft delete
+
+  @@unique([userId, companionId]) // One relationship per user-companion pair
+  @@index([userId])
+  @@index([companionId])
+  @@index([status])
+  @@index([level])
+  @@index([lastInteractionAt])
+  @@index([deletedAt])
+}
+
+// ============================================================================
+// WORLDSTATE TABLE
+// Purpose: Stores the current state of the world/environment for each companion.
+// Scalability: Indexed on companionId. One world state per companion.
+// Relationships: One-to-one with Companion.
+// ============================================================================
+
+model WorldState {
+  id String @id @default(cuid())
+
+  // Ownership
+  companionId String @unique
+  companion Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
+
+  // Environment State
+  currentScene String? // Scene ID or name
+  timeOfDay String @default("day") // day, night, dawn, dusk
+  season String @default("spring") // spring, summer, autumn, winter
+  globalMood String? // Emotional tone of the world
+
+  // Physics & Rules
+  gravity Float @default(9.8)
+  timeScale Float @default(1.0) // Simulation speed relative to real time
+  dayLengthHours Float @default(24)
+
+  // Metadata
+  customData String? @db.Text // JSON for world-specific data
+
+  // Relationships
+  scenes Scene[]
+  weatherData Weather[]
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companionId])
+}
+
+// ============================================================================
+// SCENE TABLE
+// Purpose: Stores scenes/locations within a world that a companion can be in.
+// Scalability: Indexed on worldStateId and companionId. Supports multiple scenes per world.
+// Relationships: Many scenes per world state.
+// ============================================================================
+
+model Scene {
+  id String @id @default(cuid())
+
+  // Ownership
+  worldStateId String
+  worldState WorldState @relation(fields: [worldStateId], references: [id], onDelete: Cascade)
+
+  companionId String
+  companion Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
+
+  // Scene Properties
+  name String
+  description String? @db.Text
+  type SceneType @default(INDOOR)
+  imageUrl String? // S3 URL
+
+  // Scene State
+  ambiance String? // Description of atmosphere/mood
+  populationDensity String? // empty, sparse, crowded
+  dangerLevel Int @default(0) // 0-10 scale
+
+  // Connections
+  connectedSceneIds String? // JSON array of connected scene IDs
+
+  // Metadata
+  customData String? @db.Text // JSON for scene-specific data
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([worldStateId, name]) // Unique scene names per world
+  @@index([worldStateId])
+  @@index([companionId])
+  @@index([type])
+}
+
+// ============================================================================
+// WEATHER TABLE
+// Purpose: Tracks weather conditions in the world for atmospheric context.
+// Scalability: Indexed on worldStateId. One current + historical weather records.
+// Relationships: Many weather records per world state.
+// ============================================================================
+
+model Weather {
+  id String @id @default(cuid())
+
+  // Ownership
+  worldStateId String
+  worldState WorldState @relation(fields: [worldStateId], references: [id], onDelete: Cascade)
+
+  // Weather Data
+  condition WeatherCondition @default(CLEAR)
+  temperature Float // Celsius
+  humidity Float @db.SmallInt // 0-100
+  windSpeed Float // km/h
+  visibility Float // km
+
+  // Advanced Metrics
+  pressure Float? // hPa
+  uvIndex Int? // 0-11
+  pollutionLevel String? // low, moderate, high
+
+  // Forecasting
+  isCurrent Boolean @default(false) // Current weather or historical
+  forecastedAt DateTime? // When this forecast was made
+
+  // Metadata
+  customData String? @db.Text // JSON for weather-specific data
+
+  // Timestamps
+  recordedAt DateTime @default(now())
+
+  @@index([worldStateId])
+  @@index([condition])
+  @@index([isCurrent])
+  @@index([recordedAt])
+}
+
+// ============================================================================
+// ACTIVITY TABLE
+// Purpose: Defines activities that companions can perform with users.
+// Scalability: Shared activity catalog. One activity can be used by many companions.
+// Relationships: Many companions can perform same activities (via CompanionActivity).
+// ============================================================================
+
+model Activity {
+  id String @id @default(cuid())
+
+  // Activity Definition
+  name String @unique
+  description String? @db.Text
+  type ActivityType
+  status ActivityStatus @default(AVAILABLE)
+
+  // Metadata
+  icon String? // Icon name or S3 URL
+  category String? // For grouping
+  difficulty String? // easy, medium, hard
+  duration String? // typical duration
+
+  // Requirements & Restrictions
+  minAffectionLevel Int? // -100 to 100
+  maxAffectionLevel Int? // -100 to 100
+  requiredTraits String? // JSON array of personality traits
+  restrictions String? @db.Text // Any restrictions
+
+  // Engagement
+  engagementBoost Float @default(0) // How much engagement this adds
+  affectionChange Float @default(0) // How much affection this affects
+
+  // Relationships
+  companionActivities CompanionActivity[]
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@index([status])
+}
+
+// ============================================================================
+// COMPANIONACTIVITY TABLE
+// Purpose: Junction table for many-to-many relationship between companions and activities.
+// Scalability: Indexed on both companion and activity for efficient lookups.
+// Relationships: Tracks which activities each companion can perform.
+// ============================================================================
+
+model CompanionActivity {
+  id String @id @default(cuid())
+
+  companionId String
+  companion Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
+
+  activityId String
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  // Performance Tracking
+  timesPerformed Int @default(0)
+  lastPerformedAt DateTime?
+  proficiencyLevel Float @default(0.5) // 0 to 1
+
+  // Customization
+  isUnlocked Boolean @default(true)
+  customization String? @db.Text // JSON for custom activity parameters
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companionId, activityId])
+  @@index([companionId])
+  @@index([activityId])
+  @@index([lastPerformedAt])
+}
+
+// ============================================================================
+// OUTFIT TABLE
+// Purpose: Stores companion outfit/appearance customization options.
+// Scalability: Indexed on companionId. Multiple outfits per companion.
+// Relationships: Many outfits per companion.
+// ============================================================================
+
+model Outfit {
+  id String @id @default(cuid())
+
+  companionId String
+  companion Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
+
+  // Outfit Properties
+  name String
+  description String? @db.Text
+  imageUrl String? // S3 URL
+  previewUrl String? // Thumbnail URL
+
+  // Customization
+  colorScheme String? // JSON for colors
+  accessories String? // JSON array of accessories
+  style String? // casual, formal, sporty, etc
+
+  // Usage
+  isDefault Boolean @default(false)
+  isUnlocked Boolean @default(true)
+  unlockRequirement String? // Achievement or condition
+
+  // Metadata
+  customData String? @db.Text // JSON for outfit-specific data
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companionId, name])
+  @@index([companionId])
+  @@index([isDefault])
+}
+
+// ============================================================================
+// CONVERSATION TABLE
+// Purpose: Stores conversation sessions between users and companions.
+// Scalability: Indexed on userId and companionId. One active conversation per pair.
+// Relationships: One conversation has many messages.
+// ============================================================================
+
+model Conversation {
+  id String @id @default(cuid())
+
+  // Foreign Keys
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  companionId String
+  companion Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
+
+  // Conversation State
+  title String? // Optional conversation title
+  status ConversationStatus @default(ACTIVE)
+  context String? @db.Text // Conversation context/summary
+
+  // Tracking
+  messageCount Int @default(0)
+  lastMessageAt DateTime?
+
+  // Metadata
+  tags String? // JSON array of tags
+  customData String? @db.Text // JSON for conversation-specific data
+
+  // Relationships
+  messages Message[]
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime? // Soft delete
+
+  @@unique([userId, companionId]) // One active conversation per user-companion pair
+  @@index([userId])
+  @@index([companionId])
+  @@index([status])
+  @@index([lastMessageAt])
+  @@index([deletedAt])
+}
+
+// ============================================================================
+// MESSAGE TABLE
+// Purpose: Stores individual messages within conversations.
+// Scalability: Indexed on conversationId. Large table - needs partitioning by date.
+// Relationships: Many messages per conversation.
+// ============================================================================
+
+model Message {
+  id String @id @default(cuid())
+
+  // Foreign Keys
+  conversationId String
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  companionId String
+  companion Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
+
+  // Message Content
+  role MessageRole // Who sent this message
+  status MessageStatus @default(SENT)
+  content String @db.Text
+
+  // Processing
+  tokens Int @default(0) // Token count for LLM usage tracking
+  processingTimeMs Int? // Time taken to generate response
+
+  // Metadata
+  editedAt DateTime? // When message was edited
+  reactions String? // JSON array of emoji reactions
+  customData String? @db.Text
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  deletedAt DateTime? // Soft delete
+
+  @@index([conversationId])
+  @@index([userId])
+  @@index([companionId])
+  @@index([role])
+  @@index([status])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+// ============================================================================
+// MEMORY TABLE
+// Purpose: Stores companion memories about users and interactions.
+// Scalability: Indexed on companionId and userId. Large table for long-term memory.
+// Relationships: Many memories per companion-user pair.
+// ============================================================================
+
+model Memory {
+  id String @id @default(cuid())
+
+  // Ownership
+  companionId String
+  companion Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
+
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Memory Content
+  type MemoryType
+  importance MemoryImportance @default(MODERATE)
+  content String @db.Text // The actual memory
+  summary String? // Brief summary for quick recall
+
+  // Source & Context
+  sourceConversationId String? // Which conversation created this memory
+  sourceEventType String? // What triggered this memory (achievement, milestone, etc)
+  context String? @db.Text // Additional context
+
+  // Memory Management
+  accessCount Int @default(0) // How often recalled
+  decayScore Float @default(1.0) // 0 to 1, decays over time
+  lastAccessedAt DateTime?
+  expiresAt DateTime? // Optional expiration
+
+  // Metadata
+  tags String? // JSON array of memory tags
+  embedding String? // Vector embedding for semantic search (if implemented)
+  customData String? @db.Text
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime? // Soft delete
+
+  @@index([companionId])
+  @@index([userId])
+  @@index([type])
+  @@index([importance])
+  @@index([lastAccessedAt])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+// ============================================================================
+// MOMENT TABLE
+// Purpose: Captures significant milestones and memories in relationships.
+// Scalability: Indexed on userId and companionId. One per milestone event.
+// Relationships: Associated with specific users and companions.
+// ============================================================================
+
+model Moment {
+  id String @id @default(cuid())
+
+  // Ownership
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  companionId String
+  companion Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
+
+  // Moment Details
+  title String
+  description String? @db.Text
+  type MomentType
+  category MomentCategory
+
+  // Media
+  imageUrl String? // S3 URL
+  thumbnailUrl String? // Thumbnail
+
+  // Significance
+  significance Float @default(0.5) // 0 to 1
+  tags String? // JSON array of tags
+
+  // Sharing & Privacy
+  isPublic Boolean @default(false)
+  canShare Boolean @default(true)
+
+  // Metadata
+  eventData String? @db.Text // JSON for event-specific data
+  customData String? @db.Text
+
+  // Timestamps
+  occurredAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime? // Soft delete
+
+  @@index([userId])
+  @@index([companionId])
+  @@index([type])
+  @@index([category])
+  @@index([significance])
+  @@index([occurredAt])
+  @@index([isPublic])
+  @@index([deletedAt])
+}
+
+// ============================================================================
+// NOTIFICATION TABLE
+// Purpose: Stores notifications sent to users about their companions and interactions.
+// Scalability: Indexed on userId and read status. Can grow large - archive old records.
+// Relationships: Many notifications per user.
+// ============================================================================
+
+model Notification {
+  id String @id @default(cuid())
+
+  // Recipient
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Notification Content
+  title String
+  message String @db.Text
+  type NotificationType
+  channel NotificationChannel
+  status NotificationStatus @default(SENT)
+
+  // Related Data
+  relatedEntityType String? // User, Companion, Moment, etc
+  relatedEntityId String? // ID of related entity
+
+  // Delivery Tracking
+  deliveryAttempts Int @default(1)
+  lastDeliveryAttemptAt DateTime?
+  failureReason String?
+
+  // User Interaction
+  readAt DateTime?
+  actionTaken String? // What action user took (clicked, dismissed, etc)
+
+  // Metadata
+  priority String @default("normal") // low, normal, high, critical
+  expiresAt DateTime? // TTL for notification
+  customData String? @db.Text // JSON for notification-specific data
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  scheduledFor DateTime? // For delayed notifications
+  deletedAt DateTime? // Soft delete
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([readAt])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+// ============================================================================
+// DEVICE TABLE
+// Purpose: Tracks user devices for push notifications and multi-device support.
+// Scalability: Indexed on userId. One entry per device per user.
+// Relationships: Many devices per user.
+// ============================================================================
+
+model Device {
+  id String @id @default(cuid())
+
+  // Owner
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Device Identification
+  deviceId String // Unique per device (from client)
+  deviceType DeviceType
+  deviceName String? // User-friendly name
+
+  // OS & Platform
+  osType String // ios, android, web, macos, windows
+  osVersion String?
+  appVersion String?
+
+  // Push Notifications
+  pushToken String? @unique // FCM or APNs token
+  pushEnabled Boolean @default(true)
+
+  // Tracking
+  status DeviceStatus @default(ACTIVE)
+  lastSeenAt DateTime?
+  ipAddress String?
+  userAgent String? @db.Text
+
+  // Security
+  isTrusted Boolean @default(false)
+  lastVerifiedAt DateTime?
+
+  // Metadata
+  customData String? @db.Text // JSON for device-specific data
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime? // Soft delete
+
+  @@unique([userId, deviceId])
+  @@index([userId])
+  @@index([status])
+  @@index([lastSeenAt])
+  @@index([deletedAt])
+}
+
+// ============================================================================
+// VOICESESSION TABLE
+// Purpose: Tracks voice calls, messages, and audio interactions between users and companions.
+// Scalability: Indexed on userId and companionId. One per voice interaction session.
+// Relationships: Associated with users and companions.
+// ============================================================================
+
+model VoiceSession {
+  id String @id @default(cuid())
+
+  // Participants
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  companionId String
+  companion Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
+
+  // Session Details
+  type VoiceSessionType
+  status VoiceSessionStatus @default(INITIATED)
+  title String?
+
+  // Duration & Timing
+  startedAt DateTime?
+  endedAt DateTime?
+  duration Int? // Seconds
+
+  // Audio Processing
+  voiceUrl String? // S3 URL for stored audio
+  transcription String? @db.Text // Transcribed text
+  audioQuality String? // quality metrics
+
+  // Metadata
+  language String @default("en")
+  voiceModel String? // Voice synthesis model used
+  customData String? @db.Text
+
+  // Relationships
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime? // Soft delete
+
+  @@index([userId])
+  @@index([companionId])
+  @@index([type])
+  @@index([status])
+  @@index([startedAt])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+// ============================================================================
+// ANALYTICSEVENT TABLE
+// Purpose: Tracks user behavior and system events for analytics and insights.
+// Scalability: Large high-volume table. Requires partitioning by date for performance.
+// Relationships: Many events per user.
+// ============================================================================
+
+model AnalyticsEvent {
+  id String @id @default(cuid())
+
+  // User & Context
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Event Details
+  eventType String // user_login, message_sent, companion_created, etc
+  eventName String // Human-readable event name
+  category String? // For grouping (engagement, retention, conversion, etc)
+
+  // Event Data
+  properties String? @db.Text // JSON with event-specific properties
+  metrics String? @db.Text // JSON with numeric metrics
+
+  // Device & Session
+  sessionId String? // Session identifier
+  deviceId String? // Device identifier
+
+  // Metadata
+  source String? // web, mobile, api, etc
+  ipAddress String?
+  userAgent String? @db.Text
+  customData String? @db.Text
+
+  // Timestamps
+  timestamp DateTime @default(now())
+
+  @@index([userId])
+  @@index([eventType])
+  @@index([eventName])
+  @@index([category])
+  @@index([timestamp])
+  // Note: Consider partitioning by timestamp in production for large scale
+}
+
+// ============================================================================
+// DATABASE NOTES & DESIGN DECISIONS
+// ============================================================================
+/*
+
+DESIGN RATIONALE:
+
+1. UUID Primary Keys
+   - All tables use UUID (cuid()) as primary key for:
+     * Distributed system support
+     * Better security (non-sequential)
+     * Multi-database compatibility
+     * Offline-first capabilities
+
+2. Timestamps
+   - createdAt: Immutable creation timestamp
+   - updatedAt: Updated on every record modification
+   - Other timestamps as needed (lastLoginAt, lastInteractionAt, etc)
+   - Enables audit trails and time-series queries
+
+3. Soft Deletes
+   - deletedAt field on most tables:
+     * User, Companion, Relationship, Conversation, Message, Memory, Moment, Notification, Device, VoiceSession
+     * Allows data recovery and audit trails
+     * Maintains referential integrity
+     * Critical for compliance (GDPR right to be forgotten can be delayed)
+   - Not used on lookup tables: Activity, Scene, Weather
+   - Query filter: WHERE deletedAt IS NULL
+
+4. Indexes Strategy
+   - Primary key: Automatic (id)
+   - Foreign keys: Indexed for joins
+   - Status/State columns: For filtering queries
+   - Timestamps: For time-range queries
+   - Unique constraints: Where natural uniqueness exists
+   - Composite indexes: On frequently filtered column pairs
+
+5. Enums
+   - Status fields: ACTIVE, INACTIVE, ARCHIVED, DELETED
+   - Type fields: For domain-specific categorization
+   - Ensures data consistency and prevents invalid values
+   - Reduces storage vs using strings
+   - Type-safe in application code
+
+6. Scalability Considerations
+   - Message table: Use date-based partitioning in production
+   - AnalyticsEvent table: Use time-based partitioning for high volume
+   - Large text fields: Use @db.Text for better compression
+   - JSON fields: Used for semi-structured data (customData, properties)
+   - Denormalization: totalConversations, totalMessages tracked for performance
+   - Soft deletes: Avoid hard deletes for data recovery capability
+
+7. Relationship Constraints
+   - Cascade on delete: Child records deleted when parent deleted
+   - SetNull on delete: Some foreign keys set to null (optional relationships)
+   - Ensures data integrity and prevents orphaned records
+
+8. Unique Constraints
+   - email, username on User
+   - firebaseUid on User (external auth)
+   - userId + companionId on Relationship (one relationship per pair)
+   - userId + companionId on Conversation (one active conversation per pair)
+   - userId + deviceId on Device (unique per user)
+   - companionId + name on Companion (unique companion names per user)
+   - companionId + name on Outfit (unique outfit names per companion)
+   - worldStateId + name on Scene (unique scene names per world)
+   - pushToken on Device (prevents duplicate push registrations)
+
+9. JSON Fields
+   - customData: For future extensibility without schema changes
+   - personality: Stores companion personality traits
+   - properties, metrics: For flexible event properties in analytics
+   - Used sparingly to maintain some structure
+   - Alternative to having unlimited columns
+
+10. State Management
+    - Status fields track lifecycle of entities
+    - Multiple status values allow for soft states (paused, archived, etc)
+    - Timestamps track state transitions (deletedAt, lastInteractionAt, etc)
+    - Enables audit trails and analytics
+
+11. Performance Optimization
+    - messageCount denormalized on Conversation for quick stats
+    - affectionLevel, engagementScore cached on Companion
+    - accessCount, lastAccessedAt on Memory for frequency analysis
+    - lastLoginAt, lastSeenAt for active user filtering
+    - Reduces need for expensive aggregation queries
+
+12. Privacy & Security
+    - Soft deletes support GDPR compliance
+    - Device trust level tracking
+    - User privacy level settings
+    - Notification channel preferences
+    - Push token management
+
+13. Multi-Tenancy Ready
+    - All tables rooted through userId when needed
+    - Can be partitioned by user for scaling
+    - companionId provides isolation within user scope
+    - Ready for organization-level multi-tenancy if needed
+
+*/
