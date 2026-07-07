@@ -1,0 +1,83 @@
+version: '3.9'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: featherlight_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: featherlight_user
+      POSTGRES_PASSWORD: featherlight_password
+      POSTGRES_DB: featherlight_db
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - featherlight_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U featherlight_user -d featherlight_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: featherlight_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - featherlight_network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Node.js Application (optional - can be run locally instead)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: featherlight_app
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://featherlight_user:featherlight_password@postgres:5432/featherlight_db
+      REDIS_URL: redis://redis:6379
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      LOG_LEVEL: debug
+      PORT: 3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/dist
+    networks:
+      - featherlight_network
+    restart: unless-stopped
+    profiles:
+      - with-app
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  featherlight_network:
+    driver: bridge
