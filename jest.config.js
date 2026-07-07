@@ -9,6 +9,7 @@ export default {
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^@database/(.*)$': '<rootDir>/src/database/$1',
     '^@modules/(.*)$': '<rootDir>/src/modules/$1',
     '^@services/(.*)$': '<rootDir>/src/services/$1',
     '^@engines/(.*)$': '<rootDir>/src/engines/$1',
@@ -48,6 +49,7 @@ export default {
       statements: 70,
     },
   },
+  setupFiles: ['<rootDir>/tests/env.setup.ts'],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   testTimeout: 10000,
   globals: {
