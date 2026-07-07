@@ -1,0 +1,161 @@
+import { Scene, Weather, WorldMode, Outfit as WorldOutfit } from '@engines/world';
+import { LocationManager } from '../managers/location.manager';
+import { OutfitManager } from '../managers/outfit.manager';
+import { ExpressionManager } from '../managers/expression.manager';
+import { GestureManager } from '../managers/gesture.manager';
+import { AvailabilityManager } from '../managers/availability.manager';
+import {
+  Availability,
+  CompanionLocation,
+  CompanionMood,
+  CompanionOutfit,
+  CompanionState,
+  Expression,
+  Gesture,
+} from '../enums/companion.enums';
+import { makeContext } from './helpers';
+
+describe('LocationManager', () => {
+  const manager = new LocationManager();
+
+  it('always puts a cooking companion in the kitchen', () => {
+    const context = makeContext();
+    expect(manager.resolve({ context, state: CompanionState.COOKING })).toBe(
+      CompanionLocation.KITCHEN
+    );
+  });
+
+  it('never places a relaxing companion outdoors during a storm', () => {
+    const outdoor = new Set([
+      CompanionLocation.BALCONY,
+      CompanionLocation.POOL,
+      CompanionLocation.GARDEN,
+    ]);
+    for (let i = 0; i < 40; i++) {
+      const context = makeContext({ id: `c-${i}` }, { weather: Weather.STORM });
+      const location = manager.resolve({ context, state: CompanionState.RELAXING });
+      expect(outdoor.has(location)).toBe(false);
+    }
+  });
+
+  it('is deterministic', () => {
+    const context = makeContext();
+    expect(manager.resolve({ context, state: CompanionState.RELAXING })).toBe(
+      manager.resolve({ context, state: CompanionState.RELAXING })
+    );
+  });
+});
+
+describe('OutfitManager', () => {
+  const manager = new OutfitManager();
+
+  it('wears travel clothes while driving', () => {
+    const context = makeContext();
+    expect(
+      manager.resolve({ context, state: CompanionState.DRIVING, location: CompanionLocation.CAFE })
+    ).toBe(CompanionOutfit.TRAVEL);
+  });
+
+  it('wears gym clothes at the gym', () => {
+    const context = makeContext();
+    expect(
+      manager.resolve({ context, state: CompanionState.WALKING, location: CompanionLocation.GYM })
+    ).toBe(CompanionOutfit.GYM);
+  });
+
+  it('dresses festive during a special moment', () => {
+    const context = makeContext({}, { mode: WorldMode.SPECIAL_MOMENT });
+    expect(
+      manager.resolve({ context, state: CompanionState.RELAXING, location: CompanionLocation.CAFE })
+    ).toBe(CompanionOutfit.FESTIVAL);
+  });
+
+  it('wears office attire working out, home wear working from home', () => {
+    const context = makeContext();
+    expect(
+      manager.resolve({ context, state: CompanionState.WORKING, location: CompanionLocation.CAFE })
+    ).toBe(CompanionOutfit.OFFICE);
+    expect(
+      manager.resolve({ context, state: CompanionState.WORKING, location: CompanionLocation.STUDY })
+    ).toBe(CompanionOutfit.HOME);
+  });
+
+  it('synchronizes with the world outfit when out and casual', () => {
+    const context = makeContext({}, { outfit: WorldOutfit.CASUAL, scene: Scene.CAFE });
+    expect(
+      manager.resolve({ context, state: CompanionState.WALKING, location: CompanionLocation.CAFE })
+    ).toBe(CompanionOutfit.CASUAL);
+  });
+});
+
+describe('ExpressionManager', () => {
+  const manager = new ExpressionManager();
+
+  it('is sleepy while sleeping', () => {
+    const context = makeContext();
+    expect(
+      manager.resolve({ context, state: CompanionState.SLEEPING, mood: CompanionMood.LOW_ENERGY })
+    ).toBe(Expression.SLEEPY);
+  });
+
+  it('is deterministic and always valid', () => {
+    const context = makeContext();
+    const first = manager.resolve({ context, state: CompanionState.IDLE, mood: CompanionMood.HAPPY });
+    const second = manager.resolve({ context, state: CompanionState.IDLE, mood: CompanionMood.HAPPY });
+    expect(first).toBe(second);
+    expect(Object.values(Expression)).toContain(first);
+  });
+});
+
+describe('GestureManager', () => {
+  const manager = new GestureManager();
+
+  it('cooks while cooking and walks while walking', () => {
+    const context = makeContext();
+    expect(
+      manager.resolve({ context, state: CompanionState.COOKING, location: CompanionLocation.KITCHEN })
+    ).toBe(Gesture.COOK);
+    expect(
+      manager.resolve({ context, state: CompanionState.WALKING, location: CompanionLocation.GARDEN })
+    ).toBe(Gesture.WALK);
+  });
+
+  it('is deterministic', () => {
+    const context = makeContext();
+    expect(
+      manager.resolve({ context, state: CompanionState.IDLE, location: CompanionLocation.BALCONY })
+    ).toBe(manager.resolve({ context, state: CompanionState.IDLE, location: CompanionLocation.BALCONY }));
+  });
+});
+
+describe('AvailabilityManager', () => {
+  const manager = new AvailabilityManager();
+
+  it('is offline while sleeping', () => {
+    const context = makeContext();
+    expect(
+      manager.resolve({ context, state: CompanionState.SLEEPING, mood: CompanionMood.LOW_ENERGY })
+    ).toBe(Availability.OFFLINE);
+  });
+
+  it('is do-not-disturb while driving', () => {
+    const context = makeContext();
+    expect(
+      manager.resolve({ context, state: CompanionState.DRIVING, mood: CompanionMood.FOCUSED })
+    ).toBe(Availability.DO_NOT_DISTURB);
+  });
+
+  it('is available when idle and rested', () => {
+    const context = makeContext();
+    expect(
+      manager.resolve({ context, state: CompanionState.IDLE, mood: CompanionMood.HAPPY })
+    ).toBe(Availability.AVAILABLE);
+  });
+
+  it('respects an INACTIVE status override', () => {
+    const context = makeContext({}, {}, { signals: { statusOverride: 'INACTIVE' } });
+    expect(
+      manager.resolve({ context, state: CompanionState.IDLE, mood: CompanionMood.HAPPY })
+    ).toBe(Availability.OFFLINE);
+  });
+});

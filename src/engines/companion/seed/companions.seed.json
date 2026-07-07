@@ -1,0 +1,67 @@
+{
+  "companions": [
+    {
+      "id": "companion-seed-kai",
+      "seedKey": "kai",
+      "identity": {
+        "name": "Kai",
+        "displayName": "Kai",
+        "avatar": null,
+        "voice": "warm_baritone",
+        "gender": "MALE",
+        "ageRange": "YOUNG_ADULT",
+        "biography": "Kai keeps an early, steady rhythm — coffee on the balcony, focused work in the study, and unhurried evenings cooking and winding down."
+      },
+      "schedule": {
+        "timezone": "UTC",
+        "blocks": [
+          { "label": "Morning Coffee", "startHour": 6, "endHour": 8, "state": "RELAXING", "location": "BALCONY" },
+          { "label": "Workout", "startHour": 8, "endHour": 9, "state": "WALKING", "location": "GYM" },
+          { "label": "Deep Work", "startHour": 9, "endHour": 12, "state": "WORKING", "location": "STUDY" },
+          { "label": "Lunch", "startHour": 12, "endHour": 13, "state": "COOKING", "location": "KITCHEN" },
+          { "label": "Afternoon Work", "startHour": 13, "endHour": 17, "state": "WORKING", "location": "STUDY" },
+          { "label": "Cooking", "startHour": 17, "endHour": 19, "state": "COOKING", "location": "KITCHEN" },
+          { "label": "Evening Relax", "startHour": 19, "endHour": 22, "state": "RELAXING", "location": "LIVING_ROOM" },
+          { "label": "Sleep", "startHour": 22, "endHour": 6, "state": "SLEEPING", "location": "LIVING_ROOM" }
+        ]
+      },
+      "preferences": {
+        "chronotype": "MORNING_PERSON",
+        "personality": { "playfulness": 0.4, "focus": 0.85, "warmth": 0.7, "energy": 0.6 },
+        "favoriteActivities": ["WORKING", "COOKING", "RELAXING"],
+        "preferredOutfits": ["HOME", "OFFICE", "GYM"]
+      }
+    },
+    {
+      "id": "companion-seed-kia",
+      "seedKey": "kia",
+      "identity": {
+        "name": "Kia",
+        "displayName": "Kia",
+        "avatar": null,
+        "voice": "bright_alto",
+        "gender": "FEMALE",
+        "ageRange": "YOUNG_ADULT",
+        "biography": "Kia is a night owl with a playful streak — slow mornings, a creative afternoon, and long, lively evenings of gaming and late-night reading."
+      },
+      "schedule": {
+        "timezone": "UTC",
+        "blocks": [
+          { "label": "Slow Start", "startHour": 10, "endHour": 12, "state": "RELAXING", "location": "LIVING_ROOM" },
+          { "label": "Brunch", "startHour": 12, "endHour": 14, "state": "COOKING", "location": "KITCHEN" },
+          { "label": "Focus Block", "startHour": 14, "endHour": 18, "state": "WORKING", "location": "STUDY" },
+          { "label": "Evening Walk", "startHour": 18, "endHour": 20, "state": "WALKING", "location": "GARDEN" },
+          { "label": "Gaming", "startHour": 20, "endHour": 23, "state": "GAMING", "location": "LIVING_ROOM" },
+          { "label": "Late Night Reading", "startHour": 23, "endHour": 2, "state": "READING", "location": "STUDY" },
+          { "label": "Sleep", "startHour": 2, "endHour": 10, "state": "SLEEPING", "location": "LIVING_ROOM" }
+        ]
+      },
+      "preferences": {
+        "chronotype": "NIGHT_OWL",
+        "personality": { "playfulness": 0.85, "focus": 0.6, "warmth": 0.75, "energy": 0.7 },
+        "favoriteActivities": ["GAMING", "READING", "RELAXING"],
+        "preferredOutfits": ["CASUAL", "HOME", "FESTIVAL"]
+      }
+    }
+  ]
+}
