@@ -281,6 +281,8 @@ model Companion {
   outfits Outfit[]
   worldState WorldState?
   voiceSessions VoiceSession[]
+  scenes Scene[]
+  messages Message[]
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -444,7 +446,7 @@ model Weather {
   // Weather Data
   condition WeatherCondition @default(CLEAR)
   temperature Float // Celsius
-  humidity Float @db.SmallInt // 0-100
+  humidity Int @db.SmallInt // 0-100
   windSpeed Float // km/h
   visibility Float // km
 
@@ -994,102 +996,100 @@ model AnalyticsEvent {
 // ============================================================================
 // DATABASE NOTES & DESIGN DECISIONS
 // ============================================================================
-/*
-
-DESIGN RATIONALE:
-
-1. UUID Primary Keys
-   - All tables use UUID (cuid()) as primary key for:
-     * Distributed system support
-     * Better security (non-sequential)
-     * Multi-database compatibility
-     * Offline-first capabilities
-
-2. Timestamps
-   - createdAt: Immutable creation timestamp
-   - updatedAt: Updated on every record modification
-   - Other timestamps as needed (lastLoginAt, lastInteractionAt, etc)
-   - Enables audit trails and time-series queries
-
-3. Soft Deletes
-   - deletedAt field on most tables:
-     * User, Companion, Relationship, Conversation, Message, Memory, Moment, Notification, Device, VoiceSession
-     * Allows data recovery and audit trails
-     * Maintains referential integrity
-     * Critical for compliance (GDPR right to be forgotten can be delayed)
-   - Not used on lookup tables: Activity, Scene, Weather
-   - Query filter: WHERE deletedAt IS NULL
-
-4. Indexes Strategy
-   - Primary key: Automatic (id)
-   - Foreign keys: Indexed for joins
-   - Status/State columns: For filtering queries
-   - Timestamps: For time-range queries
-   - Unique constraints: Where natural uniqueness exists
-   - Composite indexes: On frequently filtered column pairs
-
-5. Enums
-   - Status fields: ACTIVE, INACTIVE, ARCHIVED, DELETED
-   - Type fields: For domain-specific categorization
-   - Ensures data consistency and prevents invalid values
-   - Reduces storage vs using strings
-   - Type-safe in application code
-
-6. Scalability Considerations
-   - Message table: Use date-based partitioning in production
-   - AnalyticsEvent table: Use time-based partitioning for high volume
-   - Large text fields: Use @db.Text for better compression
-   - JSON fields: Used for semi-structured data (customData, properties)
-   - Denormalization: totalConversations, totalMessages tracked for performance
-   - Soft deletes: Avoid hard deletes for data recovery capability
-
-7. Relationship Constraints
-   - Cascade on delete: Child records deleted when parent deleted
-   - SetNull on delete: Some foreign keys set to null (optional relationships)
-   - Ensures data integrity and prevents orphaned records
-
-8. Unique Constraints
-   - email, username on User
-   - firebaseUid on User (external auth)
-   - userId + companionId on Relationship (one relationship per pair)
-   - userId + companionId on Conversation (one active conversation per pair)
-   - userId + deviceId on Device (unique per user)
-   - companionId + name on Companion (unique companion names per user)
-   - companionId + name on Outfit (unique outfit names per companion)
-   - worldStateId + name on Scene (unique scene names per world)
-   - pushToken on Device (prevents duplicate push registrations)
-
-9. JSON Fields
-   - customData: For future extensibility without schema changes
-   - personality: Stores companion personality traits
-   - properties, metrics: For flexible event properties in analytics
-   - Used sparingly to maintain some structure
-   - Alternative to having unlimited columns
-
-10. State Management
-    - Status fields track lifecycle of entities
-    - Multiple status values allow for soft states (paused, archived, etc)
-    - Timestamps track state transitions (deletedAt, lastInteractionAt, etc)
-    - Enables audit trails and analytics
-
-11. Performance Optimization
-    - messageCount denormalized on Conversation for quick stats
-    - affectionLevel, engagementScore cached on Companion
-    - accessCount, lastAccessedAt on Memory for frequency analysis
-    - lastLoginAt, lastSeenAt for active user filtering
-    - Reduces need for expensive aggregation queries
-
-12. Privacy & Security
-    - Soft deletes support GDPR compliance
-    - Device trust level tracking
-    - User privacy level settings
-    - Notification channel preferences
-    - Push token management
-
-13. Multi-Tenancy Ready
-    - All tables rooted through userId when needed
-    - Can be partitioned by user for scaling
-    - companionId provides isolation within user scope
-    - Ready for organization-level multi-tenancy if needed
-
-*/
+// 
+// DESIGN RATIONALE:
+// 
+// 1. UUID Primary Keys
+//    - All tables use UUID (cuid()) as primary key for:
+//      * Distributed system support
+//      * Better security (non-sequential)
+//      * Multi-database compatibility
+//      * Offline-first capabilities
+// 
+// 2. Timestamps
+//    - createdAt: Immutable creation timestamp
+//    - updatedAt: Updated on every record modification
+//    - Other timestamps as needed (lastLoginAt, lastInteractionAt, etc)
+//    - Enables audit trails and time-series queries
+// 
+// 3. Soft Deletes
+//    - deletedAt field on most tables:
+//      * User, Companion, Relationship, Conversation, Message, Memory, Moment, Notification, Device, VoiceSession
+//      * Allows data recovery and audit trails
+//      * Maintains referential integrity
+//      * Critical for compliance (GDPR right to be forgotten can be delayed)
+//    - Not used on lookup tables: Activity, Scene, Weather
+//    - Query filter: WHERE deletedAt IS NULL
+// 
+// 4. Indexes Strategy
+//    - Primary key: Automatic (id)
+//    - Foreign keys: Indexed for joins
+//    - Status/State columns: For filtering queries
+//    - Timestamps: For time-range queries
+//    - Unique constraints: Where natural uniqueness exists
+//    - Composite indexes: On frequently filtered column pairs
+// 
+// 5. Enums
+//    - Status fields: ACTIVE, INACTIVE, ARCHIVED, DELETED
+//    - Type fields: For domain-specific categorization
+//    - Ensures data consistency and prevents invalid values
+//    - Reduces storage vs using strings
+//    - Type-safe in application code
+// 
+// 6. Scalability Considerations
+//    - Message table: Use date-based partitioning in production
+//    - AnalyticsEvent table: Use time-based partitioning for high volume
+//    - Large text fields: Use @db.Text for better compression
+//    - JSON fields: Used for semi-structured data (customData, properties)
+//    - Denormalization: totalConversations, totalMessages tracked for performance
+//    - Soft deletes: Avoid hard deletes for data recovery capability
+// 
+// 7. Relationship Constraints
+//    - Cascade on delete: Child records deleted when parent deleted
+//    - SetNull on delete: Some foreign keys set to null (optional relationships)
+//    - Ensures data integrity and prevents orphaned records
+// 
+// 8. Unique Constraints
+//    - email, username on User
+//    - firebaseUid on User (external auth)
+//    - userId + companionId on Relationship (one relationship per pair)
+//    - userId + companionId on Conversation (one active conversation per pair)
+//    - userId + deviceId on Device (unique per user)
+//    - companionId + name on Companion (unique companion names per user)
+//    - companionId + name on Outfit (unique outfit names per companion)
+//    - worldStateId + name on Scene (unique scene names per world)
+//    - pushToken on Device (prevents duplicate push registrations)
+// 
+// 9. JSON Fields
+//    - customData: For future extensibility without schema changes
+//    - personality: Stores companion personality traits
+//    - properties, metrics: For flexible event properties in analytics
+//    - Used sparingly to maintain some structure
+//    - Alternative to having unlimited columns
+// 
+// 10. State Management
+//     - Status fields track lifecycle of entities
+//     - Multiple status values allow for soft states (paused, archived, etc)
+//     - Timestamps track state transitions (deletedAt, lastInteractionAt, etc)
+//     - Enables audit trails and analytics
+// 
+// 11. Performance Optimization
+//     - messageCount denormalized on Conversation for quick stats
+//     - affectionLevel, engagementScore cached on Companion
+//     - accessCount, lastAccessedAt on Memory for frequency analysis
+//     - lastLoginAt, lastSeenAt for active user filtering
+//     - Reduces need for expensive aggregation queries
+// 
+// 12. Privacy & Security
+//     - Soft deletes support GDPR compliance
+//     - Device trust level tracking
+//     - User privacy level settings
+//     - Notification channel preferences
+//     - Push token management
+// 
+// 13. Multi-Tenancy Ready
+//     - All tables rooted through userId when needed
+//     - Can be partitioned by user for scaling
+//     - companionId provides isolation within user scope
+//     - Ready for organization-level multi-tenancy if needed
+// 
