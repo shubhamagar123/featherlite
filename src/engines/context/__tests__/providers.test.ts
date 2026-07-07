@@ -13,7 +13,7 @@ import {
   mockCompanionEngine,
   mockMemoryService,
   mockMomentService,
-  mockRelationshipService,
+  mockRelationshipEngine,
   mockUserService,
   mockWorldEngine,
 } from './helpers';
@@ -77,7 +77,7 @@ describe('CompanionContextProvider', () => {
 
 describe('RelationshipContextProvider', () => {
   it('is optional and maps an existing relationship', async () => {
-    const provider = new RelationshipContextProvider(mockRelationshipService());
+    const provider = new RelationshipContextProvider(mockRelationshipEngine());
     expect(provider.required).toBe(false);
     const result = await provider.provide(REQUEST);
     expect(result.value).toMatchObject({ available: true, level: 'FRIEND', affectionScore: 42 });
@@ -85,7 +85,7 @@ describe('RelationshipContextProvider', () => {
 
   it('treats a missing relationship as a normal empty slice (not a failure)', async () => {
     const provider = new RelationshipContextProvider(
-      mockRelationshipService(Result.failure(new NotFoundError('Relationship', 'x')))
+      mockRelationshipEngine(Result.failure(new NotFoundError('Relationship', 'x')))
     );
     const result = await provider.provide(REQUEST);
     expect(result.isSuccess).toBe(true);
@@ -94,7 +94,7 @@ describe('RelationshipContextProvider', () => {
 
   it('propagates a genuine error as a failure', async () => {
     const provider = new RelationshipContextProvider(
-      mockRelationshipService(Result.failure(new Error('db down')))
+      mockRelationshipEngine(Result.failure(new Error('db down')))
     );
     const result = await provider.provide(REQUEST);
     expect(result.isSuccess).toBe(false);

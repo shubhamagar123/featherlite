@@ -5,6 +5,8 @@
 import { Result, type IResult } from '@services/types/result.type';
 import type { IUserService } from '@services/user/user.service.interface';
 import type { IRelationshipService } from '@services/relationship/relationship.service.interface';
+import type { IRelationshipEngine, RelationshipSnapshotDTO } from '@engines/relationship';
+import { RelationshipLevel, RelationshipStatus } from '@engines/relationship';
 import type { IMemoryService } from '@services/memory/memory.service.interface';
 import type { IMomentService } from '@services/moment/moment.service.interface';
 import type { UserDTO } from '@services/dtos/user.dto';
@@ -207,4 +209,31 @@ export function mockCompanionEngine(result?: IResult<CompanionStateSnapshotDTO>)
   return {
     resolveState: jest.fn().mockResolvedValue(result ?? Result.success(makeSnapshot())),
   } as unknown as ICompanionEngine;
+}
+
+export function makeRelationshipSnapshot(
+  overrides: Partial<RelationshipSnapshotDTO> = {}
+): RelationshipSnapshotDTO {
+  return {
+    id: 'rel-1',
+    userId: 'user-1',
+    companionId: 'companion-1',
+    status: RelationshipStatus.ACTIVE,
+    level: RelationshipLevel.FRIEND,
+    affectionScore: 42,
+    trustScore: 30,
+    familiarityScore: 25,
+    totalInteractions: 12,
+    ...overrides,
+  };
+}
+
+export function mockRelationshipEngine(
+  result?: IResult<RelationshipSnapshotDTO>
+): IRelationshipEngine {
+  return {
+    getRelationshipSnapshot: jest
+      .fn()
+      .mockResolvedValue(result ?? Result.success(makeRelationshipSnapshot())),
+  } as unknown as IRelationshipEngine;
 }

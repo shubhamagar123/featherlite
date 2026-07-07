@@ -2,14 +2,15 @@
  * ContextFactory — dependency-injection wiring for the Context Engine.
  *
  * This is the single composition root that connects the providers to their
- * upstream sources (World Engine, Companion Engine, and the services). Mirrors
- * the World/Companion factory pattern: a cached singleton with test overrides
- * and an explicit reset.
+ * upstream sources (World Engine, Companion Engine, Relationship Engine, and
+ * the services). Mirrors the World/Companion factory pattern: a cached
+ * singleton with test overrides and an explicit reset.
  */
 
 import { getDatabaseServices, ServiceContainer } from '@services/factory';
 import { getWorldEngine, type Clock, type IWorldEngine } from '@engines/world';
 import { getCompanionEngine, type ICompanionEngine } from '@engines/companion';
+import { getRelationshipEngine, type IRelationshipEngine } from '@engines/relationship';
 
 import { ContextBuilder } from './builder/context.builder';
 import { ContextEngine } from './context.engine';
@@ -27,6 +28,7 @@ export interface ContextEngineDeps {
   services?: ServiceContainer;
   worldEngine?: IWorldEngine;
   companionEngine?: ICompanionEngine;
+  relationshipEngine?: IRelationshipEngine;
   clock?: Clock;
 }
 
@@ -39,13 +41,14 @@ let cached: IContextEngine | null = null;
 export function buildProviderSet(
   services: ServiceContainer,
   worldEngine: IWorldEngine,
-  companionEngine: ICompanionEngine
+  companionEngine: ICompanionEngine,
+  relationshipEngine: IRelationshipEngine
 ): ContextProviderSet {
   return {
     user: new UserContextProvider(services.userService),
     companion: new CompanionContextProvider(companionEngine),
     world: new WorldContextProvider(worldEngine),
-    relationship: new RelationshipContextProvider(services.relationshipService),
+    relationship: new RelationshipContextProvider(relationshipEngine),
     memory: new MemoryContextProvider(services.memoryService),
     moments: new MomentsContextProvider(services.momentService),
   };
@@ -53,7 +56,7 @@ export function buildProviderSet(
 
 /**
  * Build (or return the cached) Context Engine, wired to the World Engine, the
- * Companion Engine, and the service layer.
+ * Companion Engine, the Relationship Engine, and the service layer.
  *
  * @param deps - Optional overrides (mainly for tests).
  */
@@ -65,8 +68,9 @@ export function getContextEngine(deps: ContextEngineDeps = {}): IContextEngine {
   const services = deps.services ?? getDatabaseServices();
   const worldEngine = deps.worldEngine ?? getWorldEngine().engine;
   const companionEngine = deps.companionEngine ?? getCompanionEngine();
+  const relationshipEngine = deps.relationshipEngine ?? getRelationshipEngine();
 
-  const providers = buildProviderSet(services, worldEngine, companionEngine);
+  const providers = buildProviderSet(services, worldEngine, companionEngine, relationshipEngine);
   const builder = new ContextBuilder(providers, deps.clock);
   const engine = new ContextEngine(builder);
 
@@ -83,5 +87,7 @@ export function resetContextEngine(): void {
 }
 
 function hasOverrides(deps: ContextEngineDeps): boolean {
-  return Boolean(deps.services || deps.worldEngine || deps.companionEngine || deps.clock);
+  return Boolean(
+    deps.services || deps.worldEngine || deps.companionEngine || deps.relationshipEngine || deps.clock
+  );
 }

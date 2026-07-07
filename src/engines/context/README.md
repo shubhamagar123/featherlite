@@ -7,8 +7,8 @@ The **Context Engine** assembles the complete runtime context required by the
 Its reason for existing is an architectural boundary:
 
 > The Conversation Engine must **never** communicate directly with the World
-> Engine, Companion Engine, Memory/Relationship/Moment sources, or any service.
-> It receives **only** a `ConversationContext` object.
+> Engine, Companion Engine, Relationship Engine, Memory/Moment sources, or any
+> service. It receives **only** a `ConversationContext` object.
 
 The Context Engine is the one place that fans out to every source, so the
 conversation tier depends on exactly one collaborator.
@@ -22,21 +22,20 @@ conversation tier depends on exactly one collaborator.
 - Orchestrate providers concurrently, time them, and degrade gracefully.
 - Never contain business logic — it aggregates, it does not decide.
 
-This is an **architecture refactor only**: no existing engine or service logic
-was modified. Providers depend on the existing interfaces (`IWorldEngine`,
-`ICompanionEngine`, `IUserService`, `IRelationshipService`, `IMemoryService`,
+Providers depend on engine interfaces (`IWorldEngine`, `ICompanionEngine`,
+`IRelationshipEngine`) and service interfaces (`IUserService`, `IMemoryService`,
 `IMomentService`) via constructor injection.
 
 ---
 
 ## Providers — one source each
 
-| Provider                        | Source (existing)            | Required | Absence handling |
+| Provider                        | Source                       | Required | Absence handling |
 | ------------------------------- | ---------------------------- | :------: | ---------------- |
 | `UserContextProvider`           | `IUserService`               |    ✔     | missing user → build aborts |
 | `CompanionContextProvider`      | `ICompanionEngine`           |    ✔     | failure → build aborts |
 | `WorldContextProvider`          | `IWorldEngine`               |    ✔     | failure → build aborts |
-| `RelationshipContextProvider`   | `IRelationshipService`       |          | not-found → empty slice |
+| `RelationshipContextProvider`   | `IRelationshipEngine`        |          | not-found → empty slice |
 | `MemoryContextProvider`         | `IMemoryService`             |          | error → degrade |
 | `MomentsContextProvider`        | `IMomentService`             |          | error → degrade |
 
@@ -69,7 +68,7 @@ flowchart TD
     UP --> US["IUserService"]
     CP --> CS["ICompanionEngine"]
     WP --> WS["IWorldEngine"]
-    RP --> RS["IRelationshipService"]
+    RP --> RS["IRelationshipEngine"]
     MP --> MS["IMemoryService"]
     OP --> OS["IMomentService"]
 
@@ -98,6 +97,7 @@ flowchart TD
 
     CVE -. FORBIDDEN .-> WE["World Engine"]
     CVE -. FORBIDDEN .-> CE["Companion Engine"]
+    CVE -. FORBIDDEN .-> RE["Relationship Engine"]
     CVE -. FORBIDDEN .-> SVC["Services"]
 
     CTX --> UP["User Provider"]
@@ -109,19 +109,21 @@ flowchart TD
 
     WP --> WE
     CP --> CE
+    RP --> RE
     UP --> SVC
-    RP --> SVC
     MP --> SVC
     OP --> SVC
     CE --> WE
+    RE --> SVC
 
     linkStyle 1 stroke:#c0392b,stroke-width:2px
     linkStyle 2 stroke:#c0392b,stroke-width:2px
     linkStyle 3 stroke:#c0392b,stroke-width:2px
+    linkStyle 4 stroke:#c0392b,stroke-width:2px
 ```
 
-The red, crossed edges (`Conversation Engine → World/Companion/Services`) are
-what this refactor **eliminates**. Everything now flows through the Context
+The red, crossed edges (`Conversation Engine -> World/Companion/Relationship/Services`)
+are what this refactor **eliminates**. Everything now flows through the Context
 Engine.
 
 ---
@@ -187,8 +189,9 @@ if (result.isSuccess) {
 ```
 
 For tests, inject mocked sources / a `FixedClock` via
-`getContextEngine({ services, worldEngine, companionEngine, clock })`, or build a
-provider set directly with `buildProviderSet(services, worldEngine, companionEngine)`.
+`getContextEngine({ services, worldEngine, companionEngine, relationshipEngine, clock })`,
+or build a provider set directly with
+`buildProviderSet(services, worldEngine, companionEngine, relationshipEngine)`.
 
 ---
 

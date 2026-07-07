@@ -10,26 +10,32 @@ import {
   mockCompanionEngine,
   mockMemoryService,
   mockMomentService,
-  mockRelationshipService,
+  mockRelationshipEngine,
   mockUserService,
   mockWorldEngine,
   TEST_DATE,
 } from './helpers';
 import type { ServiceContainer } from '@services/factory';
+import type { IRelationshipEngine } from '@engines/relationship';
 
-function buildEngine(serviceOverrides: Partial<ServiceContainer> = {}) {
+interface EngineOverrides {
+  serviceOverrides?: Partial<ServiceContainer>;
+  relationshipEngine?: IRelationshipEngine;
+}
+
+function buildEngine(overrides: EngineOverrides = {}) {
   const services = {
     userService: mockUserService(),
-    relationshipService: mockRelationshipService(),
     memoryService: mockMemoryService(),
     momentService: mockMomentService(),
-    ...serviceOverrides,
+    ...overrides.serviceOverrides,
   } as unknown as ServiceContainer;
 
   const worldEngine = mockWorldEngine();
   const companionEngine = mockCompanionEngine();
+  const relEngine = overrides.relationshipEngine ?? mockRelationshipEngine();
 
-  const providers = buildProviderSet(services, worldEngine, companionEngine);
+  const providers = buildProviderSet(services, worldEngine, companionEngine, relEngine);
   const builder = new ContextBuilder(providers, new FixedClock(TEST_DATE));
   return { engine: new ContextEngine(builder), worldEngine, companionEngine };
 }
@@ -72,7 +78,9 @@ describe('ContextEngine (integration with real providers, mocked sources)', () =
 
   it('aborts when the required user source is missing', async () => {
     const { engine } = buildEngine({
-      userService: mockUserService(Result.failure(new Error('no user'))),
+      serviceOverrides: {
+        userService: mockUserService(Result.failure(new Error('no user'))),
+      },
     });
     const result = await engine.assembleContext(REQUEST);
     expect(result.isSuccess).toBe(false);
@@ -80,7 +88,9 @@ describe('ContextEngine (integration with real providers, mocked sources)', () =
 
   it('degrades when the optional moments source errors', async () => {
     const { engine } = buildEngine({
-      momentService: mockMomentService(Result.failure(new Error('moments down'))),
+      serviceOverrides: {
+        momentService: mockMomentService(Result.failure(new Error('moments down'))),
+      },
     });
     const result = await engine.assembleContext(REQUEST);
     expect(result.isSuccess).toBe(true);
