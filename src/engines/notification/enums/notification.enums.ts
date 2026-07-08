@@ -1,0 +1,45 @@
+export enum NotificationChannel {
+  PUSH = 'PUSH',
+  EMAIL = 'EMAIL',
+  IN_APP = 'IN_APP',
+  SMS = 'SMS',
+}
+
+export enum NotificationCategory {
+  MOMENT = 'MOMENT',
+  REMINDER = 'REMINDER',
+  CALLBACK = 'CALLBACK',
+  ANNIVERSARY = 'ANNIVERSARY',
+  RELATIONSHIP = 'RELATIONSHIP',
+  MEMORY = 'MEMORY',
+  ACTIVITY = 'ACTIVITY',
+  SAFETY = 'SAFETY',
+  SYSTEM = 'SYSTEM',
+}
+
+export enum NotificationPriority {
+  LOW = 'LOW',
+  NORMAL = 'NORMAL',
+  HIGH = 'HIGH',
+  URGENT = 'URGENT',
+}
+
+export enum NotificationStatus {
+  PENDING = 'PENDING',
+  SCHEDULED = 'SCHEDULED',
+  DISPATCHED = 'DISPATCHED',
+  DELIVERED = 'DELIVERED',
+  FAILED = 'FAILED',
+  THROTTLED = 'THROTTLED',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum NotificationTemplateId {
+  MOMENT_TRIGGERED = 'MOMENT_TRIGGERED',
+  ANNIVERSARY = 'ANNIVERSARY',
+  REMINDER = 'REMINDER',
+  CALLBACK = 'CALLBACK',
+  RELATIONSHIP_MILESTONE = 'RELATIONSHIP_MILESTONE',
+  MEMORY_RECAP = 'MEMORY_RECAP',
+  GENERIC = 'GENERIC',
+}

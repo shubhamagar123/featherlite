@@ -1,0 +1,43 @@
+export enum LLMProviderType {
+  OPENAI = 'OPENAI',
+  CLAUDE = 'CLAUDE',
+  GEMINI = 'GEMINI',
+  LOCAL = 'LOCAL',
+}
+
+export enum LLMRequestMode {
+  COMPLETION = 'COMPLETION',
+  STREAMING = 'STREAMING',
+}
+
+export enum LLMResponseStatus {
+  SUCCESS = 'SUCCESS',
+  PARTIAL = 'PARTIAL',
+  FAILED = 'FAILED',
+  TIMEOUT = 'TIMEOUT',
+  RATE_LIMITED = 'RATE_LIMITED',
+  INVALID = 'INVALID',
+}
+
+export enum LLMProviderStatus {
+  HEALTHY = 'HEALTHY',
+  DEGRADED = 'DEGRADED',
+  UNHEALTHY = 'UNHEALTHY',
+  UNKNOWN = 'UNKNOWN',
+}
+
+export enum LLMSelectionStrategy {
+  ROUND_ROBIN = 'ROUND_ROBIN',
+  PRIMARY_WITH_FALLBACK = 'PRIMARY_WITH_FALLBACK',
+  LOWEST_COST = 'LOWEST_COST',
+  LOWEST_LATENCY = 'LOWEST_LATENCY',
+  BEST_QUALITY = 'BEST_QUALITY',
+}
+
+export enum LLMFinishReason {
+  STOP = 'STOP',
+  LENGTH = 'LENGTH',
+  CONTENT_FILTER = 'CONTENT_FILTER',
+  TOOL_CALL = 'TOOL_CALL',
+  ERROR = 'ERROR',
+}
