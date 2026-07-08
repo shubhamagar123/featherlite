@@ -3,7 +3,6 @@ import {
   MemoryQuery,
   MemoryQueryResult,
   MemoryContextDTO,
-  FilterCriteria,
   RankingConfig,
 } from './dto/memory-query.dto';
 import {
@@ -44,7 +43,7 @@ export class MemoryQueryService implements IMemoryQueryService {
   private filter: IMemoryFilter;
   private ranker: IMemoryRanker;
   private cache: IMemoryCache;
-  private contextMatcher: IMemoryContextMatcher;
+  private readonly contextMatcher: IMemoryContextMatcher;
 
   constructor() {
     this.retriever = new MemoryRetriever();
@@ -52,6 +51,8 @@ export class MemoryQueryService implements IMemoryQueryService {
     this.ranker = new MemoryRanker();
     this.cache = new MemoryQueryCache();
     this.contextMatcher = new MemoryContextMatcher();
+    // Retained for future context-based pre-filter; unused today.
+    void this.contextMatcher;
 
     this.setupScorers();
   }
@@ -75,8 +76,8 @@ export class MemoryQueryService implements IMemoryQueryService {
       const configuredBuilder = builder(queryBuilder);
       const queryResult = configuredBuilder.build();
 
-      if (!queryResult.isSuccess) {
-        throw new Error(`Failed to build query: ${queryResult.error}`);
+      if (!queryResult.isSuccess || !queryResult.value) {
+        throw new Error(`Failed to build query: ${queryResult.error?.message ?? 'unknown'}`);
       }
 
       const query = queryResult.value;
@@ -94,15 +95,15 @@ export class MemoryQueryService implements IMemoryQueryService {
       }
 
       const retrievedResult = this.retriever.retrieve(query);
-      if (!retrievedResult.isSuccess) {
-        throw new Error(`Memory retrieval failed: ${retrievedResult.error}`);
+      if (!retrievedResult.isSuccess || !retrievedResult.value) {
+        throw new Error(`Memory retrieval failed: ${retrievedResult.error?.message ?? 'unknown'}`);
       }
 
       let memories = retrievedResult.value;
 
       const filteredResult = this.filter.apply(memories, query.filters);
-      if (!filteredResult.isSuccess) {
-        throw new Error(`Filtering failed: ${filteredResult.error}`);
+      if (!filteredResult.isSuccess || !filteredResult.value) {
+        throw new Error(`Filtering failed: ${filteredResult.error?.message ?? 'unknown'}`);
       }
 
       memories = filteredResult.value;
@@ -110,8 +111,8 @@ export class MemoryQueryService implements IMemoryQueryService {
       const rankingConfig = this.buildRankingConfig(query);
       const rankedResult = this.ranker.rank(memories, rankingConfig, query.context);
 
-      if (!rankedResult.isSuccess) {
-        throw new Error(`Ranking failed: ${rankedResult.error}`);
+      if (!rankedResult.isSuccess || !rankedResult.value) {
+        throw new Error(`Ranking failed: ${rankedResult.error?.message ?? 'unknown'}`);
       }
 
       const rankedMemories = rankedResult.value;
@@ -257,7 +258,7 @@ export class MemoryQueryService implements IMemoryQueryService {
     });
   }
 
-  queryContext(userId: string, context: any, relationshipId?: string): Result<MemoryQueryResult> {
+  queryContext(userId: string, context: unknown, relationshipId?: string): Result<MemoryQueryResult> {
     return this.query((b) => {
       const builder = b
         .withUserId(userId)
@@ -305,7 +306,7 @@ export class MemoryQueryService implements IMemoryQueryService {
     });
   }
 
-  getContext(userId: string, relationshipId?: string, context?: any): Result<MemoryContextDTO> {
+  getContext(userId: string, relationshipId?: string, context?: unknown): Result<MemoryContextDTO> {
     return Result.try(() => {
       const queryContext = context || {};
 
@@ -317,24 +318,32 @@ export class MemoryQueryService implements IMemoryQueryService {
       const contextResult = this.queryContext(userId, queryContext, relationshipId);
 
       const results = [immediateResult, recentResult, preferencesResult, relationshipsResult, eventsResult, contextResult];
-      const failedResult = results.find((r) => !r.isSuccess);
+      const failedResult = results.find((r) => !r.isSuccess || !r.value);
       if (failedResult) {
-        throw new Error(`Failed to retrieve context data: ${failedResult.error}`);
+        throw new Error(`Failed to retrieve context data: ${failedResult.error?.message ?? 'unknown'}`);
       }
 
+      // Post-narrowing helper: after the guard above we know each result has a value.
+      const immediate = immediateResult.value!;
+      const recent = recentResult.value!;
+      const preferences = preferencesResult.value!;
+      const relationships = relationshipsResult.value!;
+      const events = eventsResult.value!;
+      const contextRes = contextResult.value!;
+
       const allMemories = [
-        ...immediateResult.value.memories.map((m) => m.memory),
-        ...recentResult.value.memories.map((m) => m.memory),
-        ...preferencesResult.value.memories.map((m) => m.memory),
-        ...relationshipsResult.value.memories.map((m) => m.memory),
-        ...eventsResult.value.memories.map((m) => m.memory),
-        ...contextResult.value.memories.map((m) => m.memory),
+        ...immediate.memories.map((m) => m.memory),
+        ...recent.memories.map((m) => m.memory),
+        ...preferences.memories.map((m) => m.memory),
+        ...relationships.memories.map((m) => m.memory),
+        ...events.memories.map((m) => m.memory),
+        ...contextRes.memories.map((m) => m.memory),
       ];
 
       const topScores = [
-        ...immediateResult.value.memories,
-        ...recentResult.value.memories,
-        ...contextResult.value.memories,
+        ...immediate.memories,
+        ...recent.memories,
+        ...contextRes.memories,
       ]
         .sort((a, b) => b.finalScore - a.finalScore)
         .slice(0, 10)
@@ -361,14 +370,14 @@ export class MemoryQueryService implements IMemoryQueryService {
       const dto: MemoryContextDTO = {
         userId,
         relationshipId,
-        immediateMemories: immediateResult.value.memories.map((m) => m.memory),
-        recentMemories: recentResult.value.memories.map((m) => m.memory),
-        relatedMemories: contextResult.value.memories.map((m) => m.memory),
-        contextualMemories: contextResult.value.memories.map((m) => m.memory),
-        preferences: preferencesResult.value.memories.map((m) => m.memory),
-        relationships: relationshipsResult.value.memories.map((m) => m.memory),
+        immediateMemories: immediate.memories.map((m) => m.memory),
+        recentMemories: recent.memories.map((m) => m.memory),
+        relatedMemories: contextRes.memories.map((m) => m.memory),
+        contextualMemories: contextRes.memories.map((m) => m.memory),
+        preferences: preferences.memories.map((m) => m.memory),
+        relationships: relationships.memories.map((m) => m.memory),
         goals: [],
-        events: eventsResult.value.memories.map((m) => m.memory),
+        events: events.memories.map((m) => m.memory),
         stats: {
           totalRetrieved: allMemories.length,
           topScores,

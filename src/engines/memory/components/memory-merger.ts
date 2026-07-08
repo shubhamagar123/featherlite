@@ -20,9 +20,7 @@ export class MemoryMerger implements IMemoryMerger {
         };
       }
 
-      const [primary, ...rest] = memories.sort(
-        (a, b) => b.importance - a.importance
-      );
+      const [primary] = memories.sort((a, b) => b.importance - a.importance);
 
       const mergedEntities = this.mergeEntities(memories);
       const mergedTags = Array.from(

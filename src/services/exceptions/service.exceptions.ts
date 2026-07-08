@@ -94,3 +94,10 @@ export class InvalidRelationError extends ServiceException {
     Object.setPrototypeOf(this, InvalidRelationError.prototype);
   }
 }
+
+export class NotImplementedError extends ServiceException {
+  constructor(feature: string, details?: Record<string, any>) {
+    super(`Not implemented: ${feature}`, 'NOT_IMPLEMENTED', 501, { feature, ...details });
+    Object.setPrototypeOf(this, NotImplementedError.prototype);
+  }
+}

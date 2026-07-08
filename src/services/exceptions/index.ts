@@ -10,4 +10,5 @@ export {
   ConstraintViolationError,
   OptimisticLockError,
   InvalidRelationError,
+  NotImplementedError,
 } from './service.exceptions';

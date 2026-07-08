@@ -1,6 +1,5 @@
 import { IResult } from '@services/types/result.type';
 import { EventEnvelope, EventHandlerMetadata } from '../dto/event.dto';
-import { EventType } from '../enums/event.enums';
 
 export interface IEventHandler<T = Record<string, any>> {
   getMetadata(): EventHandlerMetadata;

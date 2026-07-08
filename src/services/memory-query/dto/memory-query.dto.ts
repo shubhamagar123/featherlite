@@ -1,5 +1,4 @@
 import { Memory, MemorySearchQuery } from '../../../engines/memory/dto/memory.dto';
-import { MemoryType, MemoryStatus } from '../../../engines/memory/enums/memory.enums';
 import {
   MemoryQueryType,
   RankingSignalType,

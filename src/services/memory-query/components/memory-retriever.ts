@@ -14,8 +14,8 @@ export class MemoryRetriever implements IMemoryRetriever {
       const searchQuery = this.buildSearchQuery(query);
       const result = engine.search(searchQuery);
 
-      if (!result.isSuccess) {
-        throw new Error(`Memory retrieval failed: ${result.error}`);
+      if (!result.isSuccess || !result.value) {
+        throw new Error(`Memory retrieval failed: ${result.error?.message ?? 'unknown'}`);
       }
 
       return result.value.memories;

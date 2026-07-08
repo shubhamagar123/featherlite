@@ -1,30 +1,37 @@
-import { BaseEventHandler } from '../../event/contracts/base-event-handler';
-import { EventEnvelope } from '../../event/dto/event.dto';
-import { Result } from '../../../services/types/result.type';
-import { IMemoryEngine } from '../interfaces/memory.interfaces';
+import { BaseEventHandler } from '@engines/event';
+import type { EventEnvelope } from '@engines/event';
+import { EventType } from '@engines/event';
+import { IMemoryOperations } from '../interfaces/memory.interfaces';
 import { MemoryType } from '../enums/memory.enums';
 
-export class InteractionEndedHandler extends BaseEventHandler<any> {
-  constructor(private memoryEngine: IMemoryEngine) {
-    super('INTERACTION_ENDED', 5, true);
+interface InteractionEndedPayload {
+  userId?: string;
+  companionId?: string;
+  conversationSummary?: string;
+}
+
+export class InteractionEndedHandler extends BaseEventHandler<InteractionEndedPayload> {
+  constructor(private readonly memoryEngine: IMemoryOperations) {
+    super(EventType.INTERACTION_ENDED, 5, true);
   }
 
-  protected async onEvent(envelope: EventEnvelope<any>): Promise<void> {
+  protected async onEvent(envelope: EventEnvelope<InteractionEndedPayload>): Promise<void> {
     const { conversationSummary, userId, companionId } = envelope.payload;
 
-    if (!conversationSummary || !userId) {
-      return;
-    }
+    if (!conversationSummary || !userId) return;
 
     const createResult = this.memoryEngine.create(
       userId,
       MemoryType.CONTEXT,
-      `Interaction with companion ${companionId}`,
+      `Interaction with companion ${companionId ?? 'unknown companion'}`,
       conversationSummary
     );
 
     if (!createResult.isSuccess) {
-      console.error('Failed to create memory from interaction', createResult.error);
+      this.logger.warn(
+        { err: createResult.error, eventId: envelope.metadata.eventId, userId, companionId },
+        'Failed to create memory from interaction'
+      );
     }
   }
 }

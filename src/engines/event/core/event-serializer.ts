@@ -1,5 +1,4 @@
 import { EventEnvelope, DomainEventPayload } from '../dto/event.dto';
-import { EventStatus } from '../enums/event.enums';
 
 export class EventSerializer {
   static serialize<T extends DomainEventPayload>(envelope: EventEnvelope<T>): string {

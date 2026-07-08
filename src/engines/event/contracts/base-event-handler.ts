@@ -1,7 +1,7 @@
 import { IResult, Result } from '@services/types/result.type';
 import { IEventHandler } from '../interfaces/event-handler.interface';
 import { EventEnvelope, EventHandlerMetadata } from '../dto/event.dto';
-import { EventType, EventPriority } from '../enums/event.enums';
+import { EventType } from '../enums/event.enums';
 import { createLogger } from '@utils/logger';
 import type { Logger } from 'pino';
 import { randomUUID } from 'crypto';

@@ -1,24 +1,24 @@
-import { IResult, Result } from '@services/types/result.type';
+import { IResult } from '@services/types/result.type';
 import { IEventBus, IEventPublisher, IEventSubscriber } from './interfaces/event-bus.interface';
 import { IEventHandler } from './interfaces/event-handler.interface';
 import { EventBus } from './core/event-bus';
-import { EventEnvelope, DomainEventPayload, EventMetrics, EventRetryPolicy, DeadLetterEntry } from './dto/event.dto';
-import { EventType, EventDispatchMode, AggregateType } from './enums/event.enums';
-import { EventFactory } from './core/event-factory';
-import { EventContext } from './core/event-context';
-import { createLogger } from '@utils/logger';
-import type { Logger } from 'pino';
+import {
+  EventEnvelope,
+  DomainEventPayload,
+  EventMetrics,
+  EventRetryPolicy,
+  DeadLetterEntry,
+} from './dto/event.dto';
+import { EventType, EventDispatchMode } from './enums/event.enums';
 
 export class EventEngine implements IEventPublisher, IEventSubscriber {
   private readonly bus: IEventBus;
-  private readonly logger: Logger;
 
   constructor(retryPolicy?: EventRetryPolicy) {
     this.bus = new EventBus(retryPolicy);
-    this.logger = createLogger('EventEngine');
   }
 
-  async publish<T extends DomainEventPayload>(
+  async publish<T extends DomainEventPayload = Record<string, any>>(
     envelope: EventEnvelope<T>,
     mode: EventDispatchMode = EventDispatchMode.SYNC
   ): Promise<IResult<void>> {

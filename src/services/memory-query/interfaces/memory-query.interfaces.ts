@@ -19,7 +19,8 @@ export interface IMemoryQueryBuilder {
   withOffset(offset: number): IMemoryQueryBuilder;
   withFilter(filter: FilterCriteria): IMemoryQueryBuilder;
   withRankingMode(mode: RankingMode): IMemoryQueryBuilder;
-  withContext(context: any): IMemoryQueryBuilder;
+  withContext(context: unknown): IMemoryQueryBuilder;
+  withTTL(ttlMs: number): IMemoryQueryBuilder;
   enableSignal(type: RankingSignalType, weight: number): IMemoryQueryBuilder;
   disableSignal(type: RankingSignalType): IMemoryQueryBuilder;
   build(): Result<MemoryQuery>;
@@ -72,11 +73,11 @@ export interface IMemoryQueryService {
 
   queryRelationships(userId: string, relationshipId?: string): Result<MemoryQueryResult>;
 
-  queryContext(userId: string, context: any, relationshipId?: string): Result<MemoryQueryResult>;
+  queryContext(userId: string, context: unknown, relationshipId?: string): Result<MemoryQueryResult>;
 
   queryEvents(userId: string, relationshipId?: string): Result<MemoryQueryResult>;
 
-  getContext(userId: string, relationshipId?: string, context?: any): Result<MemoryContextDTO>;
+  getContext(userId: string, relationshipId?: string, context?: unknown): Result<MemoryContextDTO>;
 
   preload(userId: string, relationshipId?: string): Result<MemoryContextDTO>;
 }

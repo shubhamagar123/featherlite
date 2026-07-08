@@ -1,7 +1,7 @@
 import { IResult, Result } from '@services/types/result.type';
 import { IEventDispatcher, IEventRegistry } from '../interfaces/event-bus.interface';
 import { EventEnvelope, DomainEventPayload, EventRetryPolicy } from '../dto/event.dto';
-import { EventDispatchMode, EventStatus } from '../enums/event.enums';
+import { EventDispatchMode } from '../enums/event.enums';
 import { createLogger } from '@utils/logger';
 import type { Logger } from 'pino';
 

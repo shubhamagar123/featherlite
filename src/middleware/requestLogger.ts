@@ -1,10 +1,11 @@
 import type { Request, Response, NextFunction } from 'express';
 import pinoHttp from 'pino-http';
+import type { LevelWithSilent } from 'pino';
 import { logger } from '@utils/logger';
 
 const pinoHttpMiddleware = pinoHttp({
   logger,
-  customLogLevel: (_req: Request, res: Response, err?: Error): string => {
+  customLogLevel: (_req: Request, res: Response, err?: Error): LevelWithSilent => {
     if (res.statusCode >= 500 || err) return 'error';
     if (res.statusCode >= 400) return 'warn';
     if (res.statusCode >= 300) return 'debug';

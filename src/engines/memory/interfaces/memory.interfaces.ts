@@ -5,7 +5,6 @@ import {
   MemorySearchResult,
   MemorySnapshot,
   Entity,
-  ConflictingMemory,
   MemoryMergeResult,
   RankingScores,
   ExpiryDecision,
@@ -88,7 +87,7 @@ export interface IMemoryTimeline {
   ): Result<Memory[]>;
 }
 
-export interface IMemoryEngine {
+export interface IMemoryOperations {
   create(
     userId: string,
     memoryType: MemoryType,

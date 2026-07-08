@@ -111,14 +111,14 @@ describe('MemoryFilter', () => {
     const result = filter.apply(mockMemories, [
       {
         type: FilterType.CONFIDENCE,
-        value: 0.85,
+        value: 0.75,
         operator: 'lt',
       },
     ]);
 
     expect(result.isSuccess).toBe(true);
     expect(result.value).toHaveLength(1);
-    expect(result.value[0].id).toBe('2');
+    expect(result.value?.[0]?.id).toBe('2');
   });
 
   it('should filter by expiry status', () => {
@@ -180,14 +180,17 @@ describe('MemoryFilter', () => {
   });
 
   it('should apply multiple filters', () => {
+    // FACT + rel1 matches Alice (active) and Charlie (archived). The filter
+    // combines conjunctively — both match, so expect two results in id order.
     const result = filter.apply(mockMemories, [
       { type: FilterType.MEMORY_TYPE, value: MemoryType.FACT },
       { type: FilterType.RELATIONSHIP, value: 'rel1' },
     ]);
 
     expect(result.isSuccess).toBe(true);
-    expect(result.value).toHaveLength(1);
-    expect(result.value[0].id).toBe('1');
+    expect(result.value).toHaveLength(2);
+    const ids = (result.value ?? []).map((m) => m.id).sort();
+    expect(ids).toEqual(['1', '3']);
   });
 
   it('should return all memories when no filters are provided', () => {

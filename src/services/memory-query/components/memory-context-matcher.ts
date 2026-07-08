@@ -2,8 +2,15 @@ import { Result } from '../../../services/types/result.type';
 import { Memory } from '../../../engines/memory/dto/memory.dto';
 import { IMemoryContextMatcher } from '../interfaces/memory-query.interfaces';
 
+interface MatcherContext {
+  currentActivity?: string;
+  currentScene?: string;
+  currentMood?: string;
+  recentEntities?: string[];
+}
+
 export class MemoryContextMatcher implements IMemoryContextMatcher {
-  matchContext(memories: Memory[], context: any): Result<number[]> {
+  matchContext(memories: Memory[], context: MatcherContext | null | undefined): Result<number[]> {
     return Result.try(() => {
       const matches: number[] = [];
 
@@ -23,7 +30,7 @@ export class MemoryContextMatcher implements IMemoryContextMatcher {
     });
   }
 
-  private isContextMatch(memory: Memory, context: any): boolean {
+  private isContextMatch(memory: Memory, context: MatcherContext): boolean {
     if (this.matchesActivity(memory, context)) return true;
     if (this.matchesScene(memory, context)) return true;
     if (this.matchesMood(memory, context)) return true;
@@ -32,51 +39,51 @@ export class MemoryContextMatcher implements IMemoryContextMatcher {
     return false;
   }
 
-  private matchesActivity(memory: Memory, context: any): boolean {
+  private matchesActivity(memory: Memory, context: MatcherContext): boolean {
     if (!context.currentActivity) return false;
 
-    const activityTokens = context.currentActivity.toLowerCase().split(/\s+/);
-    const memoryText = `${memory.content} ${memory.metadata?.activity || ''}`.toLowerCase();
-    const memoryTokens = memoryText.split(/\s+/);
+    const activityTokens: string[] = context.currentActivity.toLowerCase().split(/\s+/);
+    const memoryText = `${memory.description} ${String(memory.metadata?.activity ?? '')}`.toLowerCase();
+    const memoryTokens: string[] = memoryText.split(/\s+/);
 
-    const matches = activityTokens.filter((token) =>
-      memoryTokens.some((mt) => mt.includes(token))
+    const matches = activityTokens.filter((token: string) =>
+      memoryTokens.some((mt: string) => mt.includes(token))
     ).length;
 
     return matches > 0;
   }
 
-  private matchesScene(memory: Memory, context: any): boolean {
+  private matchesScene(memory: Memory, context: MatcherContext): boolean {
     if (!context.currentScene) return false;
 
-    const sceneTokens = context.currentScene.toLowerCase().split(/\s+/);
-    const memoryLocation = `${memory.metadata?.location || ''}`.toLowerCase();
+    const sceneTokens: string[] = context.currentScene.toLowerCase().split(/\s+/);
+    const memoryLocation = String(memory.metadata?.location ?? '').toLowerCase();
 
-    return sceneTokens.some((token) => memoryLocation.includes(token));
+    return sceneTokens.some((token: string) => memoryLocation.includes(token));
   }
 
-  private matchesMood(memory: Memory, context: any): boolean {
+  private matchesMood(memory: Memory, context: MatcherContext): boolean {
     if (!context.currentMood) return false;
 
-    const moodTokens = context.currentMood.toLowerCase().split(/\s+/);
-    const memoryMood = `${memory.metadata?.mood || ''}`.toLowerCase();
+    const moodTokens: string[] = context.currentMood.toLowerCase().split(/\s+/);
+    const memoryMood = String(memory.metadata?.mood ?? '').toLowerCase();
 
-    return moodTokens.some((token) => memoryMood.includes(token));
+    return moodTokens.some((token: string) => memoryMood.includes(token));
   }
 
-  private matchesEntities(memory: Memory, context: any): boolean {
+  private matchesEntities(memory: Memory, context: MatcherContext): boolean {
     if (!context.recentEntities || context.recentEntities.length === 0) {
       return false;
     }
 
-    const contextEntities = new Set(
+    const contextEntities = new Set<string>(
       context.recentEntities.map((e: string) => e.toLowerCase())
     );
-    const memoryEntities = new Set(
+    const memoryEntities = new Set<string>(
       (memory.entities || []).map((e) => e.name.toLowerCase())
     );
 
-    const matches = Array.from(contextEntities).filter((e) => memoryEntities.has(e));
+    const matches = Array.from(contextEntities).filter((e: string) => memoryEntities.has(e));
     return matches.length > 0;
   }
 }

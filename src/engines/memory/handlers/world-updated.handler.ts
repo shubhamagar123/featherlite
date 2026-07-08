@@ -1,20 +1,24 @@
-import { BaseEventHandler } from '../../event/contracts/base-event-handler';
-import { EventEnvelope } from '../../event/dto/event.dto';
-import { Result } from '../../../services/types/result.type';
-import { IMemoryEngine } from '../interfaces/memory.interfaces';
+import { BaseEventHandler } from '@engines/event';
+import type { EventEnvelope } from '@engines/event';
+import { EventType } from '@engines/event';
+import { IMemoryOperations } from '../interfaces/memory.interfaces';
 import { MemoryType } from '../enums/memory.enums';
 
-export class WorldUpdatedHandler extends BaseEventHandler<any> {
-  constructor(private memoryEngine: IMemoryEngine) {
-    super('WORLD_UPDATED', 4, true);
+interface WorldUpdatedPayload {
+  userId?: string;
+  companionId?: string;
+  updates?: Record<string, unknown>;
+}
+
+export class WorldUpdatedHandler extends BaseEventHandler<WorldUpdatedPayload> {
+  constructor(private readonly memoryEngine: IMemoryOperations) {
+    super(EventType.WORLD_UPDATED, 4, true);
   }
 
-  protected async onEvent(envelope: EventEnvelope<any>): Promise<void> {
+  protected async onEvent(envelope: EventEnvelope<WorldUpdatedPayload>): Promise<void> {
     const { userId, companionId, updates } = envelope.payload;
 
-    if (!userId || !companionId || !updates) {
-      return;
-    }
+    if (!userId || !companionId || !updates) return;
 
     const description = `Companion's world state updated: ${JSON.stringify(updates)}`;
 
@@ -26,7 +30,10 @@ export class WorldUpdatedHandler extends BaseEventHandler<any> {
     );
 
     if (!createResult.isSuccess) {
-      console.error('Failed to create world memory', createResult.error);
+      this.logger.warn(
+        { err: createResult.error, eventId: envelope.metadata.eventId, userId, companionId },
+        'Failed to create world memory'
+      );
     }
   }
 }

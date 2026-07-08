@@ -22,7 +22,7 @@ export class MemoryQueryBuilder implements IMemoryQueryBuilder {
   private signals: Map<RankingSignalType, RankingSignal> = new Map();
   private limit: number = 20;
   private offset: number = 0;
-  private context: any = {};
+  private context: Record<string, unknown> = {};
   private ttl: number | null = null;
 
   withQueryType(type: MemoryQueryType): IMemoryQueryBuilder {
@@ -65,8 +65,12 @@ export class MemoryQueryBuilder implements IMemoryQueryBuilder {
     return this;
   }
 
-  withContext(context: any): IMemoryQueryBuilder {
-    this.context = context || {};
+  withContext(context: unknown): IMemoryQueryBuilder {
+    if (context && typeof context === 'object') {
+      this.context = context as Record<string, unknown>;
+    } else {
+      this.context = {};
+    }
     return this;
   }
 

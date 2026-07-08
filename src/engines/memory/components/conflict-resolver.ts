@@ -1,6 +1,5 @@
 import { Result } from '../../../services/types/result.type';
 import { ConflictResolutionResult, Memory } from '../dto/memory.dto';
-import { MemoryStatus } from '../enums/memory.enums';
 import { IConflictResolver } from '../interfaces/memory.interfaces';
 
 export class ConflictResolver implements IConflictResolver {

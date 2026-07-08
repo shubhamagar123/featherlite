@@ -2,8 +2,12 @@ import { Result } from '../../../services/types/result.type';
 import { Memory } from '../../../engines/memory/dto/memory.dto';
 import { IMemoryScorer } from '../interfaces/memory-query.interfaces';
 
+interface WorldContext {
+  currentScene?: string;
+}
+
 export class WorldRelevanceScorer implements IMemoryScorer {
-  score(memories: Memory[], context: any): Result<Map<string, number>> {
+  score(memories: Memory[], context: WorldContext | null | undefined): Result<Map<string, number>> {
     return Result.try(() => {
       const scores = new Map<string, number>();
       const currentScene = context?.currentScene;
@@ -15,14 +19,14 @@ export class WorldRelevanceScorer implements IMemoryScorer {
         return scores;
       }
 
-      const sceneTokens = new Set(currentScene.toLowerCase().split(/\s+/));
+      const sceneTokens = new Set<string>(currentScene.toLowerCase().split(/\s+/));
 
       for (const memory of memories) {
-        const memoryText = `${memory.content} ${(memory.metadata?.location || '')} ${(memory.metadata?.context || '')}`.toLowerCase();
-        const memoryTokens = memoryText.split(/\s+/);
+        const memoryText = `${memory.description} ${String(memory.metadata?.location ?? '')} ${String(memory.metadata?.context ?? '')}`.toLowerCase();
+        const memoryTokens: string[] = memoryText.split(/\s+/);
 
-        const matches = Array.from(sceneTokens).filter((token) =>
-          memoryTokens.some((mt) => mt.includes(token) || token.includes(mt))
+        const matches = Array.from(sceneTokens).filter((token: string) =>
+          memoryTokens.some((mt: string) => mt.includes(token) || token.includes(mt))
         ).length;
 
         const score = sceneTokens.size > 0 ? (matches / sceneTokens.size) * 100 : 50;

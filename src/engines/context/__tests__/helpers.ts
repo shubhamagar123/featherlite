@@ -5,8 +5,8 @@
 import { Result, type IResult } from '@services/types/result.type';
 import type { IUserService } from '@services/user/user.service.interface';
 import type { IRelationshipService } from '@services/relationship/relationship.service.interface';
-import type { IRelationshipEngine, RelationshipSnapshotDTO } from '@engines/relationship';
-import { RelationshipLevel, RelationshipStatus } from '@engines/relationship';
+import type { IRelationshipEngine, RelationshipSnapshot } from '@engines/relationship';
+import { RelationshipStatus, RelationshipDimensionType } from '@engines/relationship';
 import type { IMemoryEngine, CriticalMemoriesSliceDTO } from '@engines/memory';
 import type { IMemoryService } from '@services/memory/memory.service.interface';
 import type { IMomentService } from '@services/moment/moment.service.interface';
@@ -213,27 +213,46 @@ export function mockCompanionEngine(result?: IResult<CompanionStateSnapshotDTO>)
 }
 
 export function makeRelationshipSnapshot(
-  overrides: Partial<RelationshipSnapshotDTO> = {}
-): RelationshipSnapshotDTO {
+  overrides: Partial<RelationshipSnapshot> = {}
+): RelationshipSnapshot {
+  const dim = (value: number) => ({ type: RelationshipDimensionType.TRUST, value, lastUpdated: new Date(), changeHistory: [], trend: 0 });
+  const dimensions = {
+    [RelationshipDimensionType.TRUST]: { ...dim(30), type: RelationshipDimensionType.TRUST },
+    [RelationshipDimensionType.COMFORT]: { ...dim(30), type: RelationshipDimensionType.COMFORT },
+    [RelationshipDimensionType.PLAYFULNESS]: { ...dim(30), type: RelationshipDimensionType.PLAYFULNESS },
+    [RelationshipDimensionType.EMOTIONAL_DEPTH]: { ...dim(30), type: RelationshipDimensionType.EMOTIONAL_DEPTH },
+    [RelationshipDimensionType.COMMUNICATION_STYLE]: { ...dim(30), type: RelationshipDimensionType.COMMUNICATION_STYLE },
+    [RelationshipDimensionType.SHARED_RITUALS]: { ...dim(30), type: RelationshipDimensionType.SHARED_RITUALS },
+    [RelationshipDimensionType.SHARED_MEMORIES]: { ...dim(30), type: RelationshipDimensionType.SHARED_MEMORIES },
+    [RelationshipDimensionType.BOUNDARIES]: { ...dim(30), type: RelationshipDimensionType.BOUNDARIES },
+    [RelationshipDimensionType.FAMILIARITY]: { ...dim(25), type: RelationshipDimensionType.FAMILIARITY },
+    [RelationshipDimensionType.RELIABILITY]: { ...dim(30), type: RelationshipDimensionType.RELIABILITY },
+    [RelationshipDimensionType.SUPPORTIVENESS]: { ...dim(30), type: RelationshipDimensionType.SUPPORTIVENESS },
+    [RelationshipDimensionType.RESPECT]: { ...dim(30), type: RelationshipDimensionType.RESPECT },
+  };
   return {
     id: 'rel-1',
     userId: 'user-1',
     companionId: 'companion-1',
-    status: RelationshipStatus.ACTIVE,
-    level: RelationshipLevel.FRIEND,
-    affectionScore: 42,
-    trustScore: 30,
-    familiarityScore: 25,
-    totalInteractions: 12,
+    status: RelationshipStatus.INITIATED,
+    phase: 'FRIEND' as unknown as RelationshipSnapshot['phase'],
+    dimensions,
+    overallHealth: 42,
+    trajectory: 0,
+    strengths: [],
+    vulnerabilities: [],
+    nextGrowthOpportunity: 'CONVERSATION_QUALITY' as unknown as RelationshipSnapshot['nextGrowthOpportunity'],
+    createdAt: new Date(),
+    updatedAt: new Date(),
     ...overrides,
   };
 }
 
 export function mockRelationshipEngine(
-  result?: IResult<RelationshipSnapshotDTO>
+  result?: IResult<RelationshipSnapshot>
 ): IRelationshipEngine {
   return {
-    getRelationshipSnapshot: jest
+    getSnapshot: jest
       .fn()
       .mockResolvedValue(result ?? Result.success(makeRelationshipSnapshot())),
   } as unknown as IRelationshipEngine;

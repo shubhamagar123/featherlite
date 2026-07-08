@@ -19,7 +19,7 @@ export class ConversationRelevanceScorer implements IMemoryScorer {
       const historyTokens = new Set(historyText.split(/\s+/));
 
       for (const memory of memories) {
-        const memoryText = `${memory.content} ${(memory.entities || [])
+        const memoryText = `${memory.description} ${(memory.entities || [])
           .map((e) => e.name)
           .join(' ')}`.toLowerCase();
         const memoryTokens = memoryText.split(/\s+/);

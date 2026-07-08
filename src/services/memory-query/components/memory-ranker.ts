@@ -25,14 +25,14 @@ export class MemoryRanker implements IMemoryRanker {
 
       let activeSignals = 0;
       const enabledSignals = Array.from(config.signals.entries())
-        .filter(([type, _]) => this.scorers.has(type))
+        .filter(([type]) => this.scorers.has(type))
         .map(([type, weight]) => ({ type, weight }));
 
-      for (const { type, weight } of enabledSignals) {
+      for (const { type } of enabledSignals) {
         const scorer = this.scorers.get(type)!;
         const scoresResult = scorer.score(memories, context);
 
-        if (!scoresResult.isSuccess) {
+        if (!scoresResult.isSuccess || !scoresResult.value) {
           continue;
         }
 
@@ -78,7 +78,7 @@ export class MemoryRanker implements IMemoryRanker {
   private computeFinalScore(
     scores: Map<RankingSignalType, number>,
     config: RankingConfig,
-    activeSignals: number
+    _activeSignals: number
   ): number {
     if (scores.size === 0) {
       return 0;
@@ -115,7 +115,7 @@ export class MemoryRanker implements IMemoryRanker {
   private applyStrictMode(
     baseScore: number,
     scores: Map<RankingSignalType, number>,
-    config: RankingConfig
+    _config: RankingConfig
   ): number {
     const minScore = Math.min(...scores.values());
     const variance = Math.max(...scores.values()) - minScore;
@@ -130,7 +130,7 @@ export class MemoryRanker implements IMemoryRanker {
   private applyPermissiveMode(
     baseScore: number,
     scores: Map<RankingSignalType, number>,
-    config: RankingConfig
+    _config: RankingConfig
   ): number {
     const maxScore = Math.max(...scores.values());
     return Math.max(baseScore, maxScore * 0.9);
@@ -163,9 +163,9 @@ export class MemoryRanker implements IMemoryRanker {
   }
 
   private generateReasoning(
-    memory: Memory,
+    _memory: Memory,
     scores: Map<RankingSignalType, number>,
-    config: RankingConfig
+    _config: RankingConfig
   ): string {
     const topSignals = Array.from(scores.entries())
       .sort(([, a], [, b]) => b - a)

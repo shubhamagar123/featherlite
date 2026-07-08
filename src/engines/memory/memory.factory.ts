@@ -1,5 +1,8 @@
-import { IMemoryEngine } from './interfaces/memory.interfaces';
+import { IMemoryOperations } from './interfaces/memory.interfaces';
+import { IMemoryEngine } from './interfaces/memory-engine.interface';
 import { MemoryEngine } from './memory.engine';
+
+export type MemoryEngineHandle = IMemoryEngine & IMemoryOperations;
 import { MemoryRepository } from './repositories/memory.repository';
 import { EntityExtractor } from './components/entity-extractor';
 import { MemoryClassifier } from './components/memory-classifier';
@@ -15,12 +18,12 @@ import { MemoryTimeline } from './components/memory-timeline';
 import { MemorySnapshotBuilder } from './components/memory-snapshot-builder';
 
 export interface MemoryEngineDeps {
-  memoryEngine?: IMemoryEngine;
+  memoryEngine?: MemoryEngineHandle;
 }
 
-let cached: IMemoryEngine | null = null;
+let cached: MemoryEngineHandle | null = null;
 
-export function getMemoryEngine(_deps: MemoryEngineDeps = {}): IMemoryEngine {
+export function getMemoryEngine(_deps: MemoryEngineDeps = {}): MemoryEngineHandle {
   if (_deps.memoryEngine) {
     return _deps.memoryEngine;
   }
@@ -64,7 +67,7 @@ export function getMemoryEngine(_deps: MemoryEngineDeps = {}): IMemoryEngine {
   return cached;
 }
 
-export function registerMemoryEngine(engine: IMemoryEngine): void {
+export function registerMemoryEngine(engine: MemoryEngineHandle): void {
   cached = engine;
 }
 

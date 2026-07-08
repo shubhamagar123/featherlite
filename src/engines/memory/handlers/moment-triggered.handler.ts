@@ -1,21 +1,26 @@
-import { BaseEventHandler } from '../../event/contracts/base-event-handler';
-import { EventEnvelope } from '../../event/dto/event.dto';
-import { Result } from '../../../services/types/result.type';
-import { IMemoryEngine } from '../interfaces/memory.interfaces';
+import { BaseEventHandler } from '@engines/event';
+import type { EventEnvelope } from '@engines/event';
+import { EventType } from '@engines/event';
+import { IMemoryOperations } from '../interfaces/memory.interfaces';
 import { MemoryType } from '../enums/memory.enums';
 
-export class MomentTriggeredHandler extends BaseEventHandler<any> {
-  constructor(private memoryEngine: IMemoryEngine) {
-    super('MOMENT_TRIGGERED', 6, true);
+interface MomentTriggeredPayload {
+  userId?: string;
+  companionId?: string;
+  momentType?: string;
+  description?: string;
+  significance?: number | string;
+}
+
+export class MomentTriggeredHandler extends BaseEventHandler<MomentTriggeredPayload> {
+  constructor(private readonly memoryEngine: IMemoryOperations) {
+    super(EventType.MOMENT_TRIGGERED, 6, true);
   }
 
-  protected async onEvent(envelope: EventEnvelope<any>): Promise<void> {
-    const { userId, companionId, momentType, description, significance } =
-      envelope.payload;
+  protected async onEvent(envelope: EventEnvelope<MomentTriggeredPayload>): Promise<void> {
+    const { userId, companionId, momentType, description, significance } = envelope.payload;
 
-    if (!userId || !companionId || !momentType) {
-      return;
-    }
+    if (!userId || !companionId || !momentType) return;
 
     const fullDescription = `${momentType} moment: ${description}. Significance: ${significance}`;
 
@@ -27,7 +32,10 @@ export class MomentTriggeredHandler extends BaseEventHandler<any> {
     );
 
     if (!createResult.isSuccess) {
-      console.error('Failed to create moment memory', createResult.error);
+      this.logger.warn(
+        { err: createResult.error, eventId: envelope.metadata.eventId, userId, companionId },
+        'Failed to create moment memory'
+      );
     }
   }
 }

@@ -41,6 +41,7 @@ export {
 
 export {
   UserCreatedEvent,
+  RelationshipCreatedEvent,
   RelationshipUpdatedEvent,
   RelationshipDimensionChangedEvent,
   ConversationStartedEvent,
@@ -50,6 +51,7 @@ export {
 
 export type {
   UserCreatedPayload,
+  RelationshipCreatedPayload,
   RelationshipUpdatedPayload,
   RelationshipDimensionChangedPayload,
   ConversationStartedPayload,
