@@ -19,6 +19,7 @@ rules. Engines speak to each other through well-defined interfaces.
 | **Memory Engine**       | Retrieve critical memories for conversation      | Memory retrieval & ranking (storage only) |
 | **Memory Extraction Engine** | Extract & classify memories from events    | Entity extraction, importance, categorization |
 | **Context Engine**      | Assemble complete conversation runtime context  | Provider orchestration, degradation policy |
+| **Prompt Engine**       | Build production-ready prompts for any LLM       | Prompt construction, context injection, rules, compression |
 
 ---
 
@@ -29,6 +30,7 @@ flowchart TD
     CVE["Conversation Engine<br/>(future)"]
 
     CVE -->|"ONLY dependency"| CTX["Context Engine"]
+    CVE -->|"build prompts via"| PROMPT["Prompt Engine"]
 
     CTX --> WE["World Engine"]
     CTX --> CE["Companion Engine"]
@@ -37,6 +39,8 @@ flowchart TD
     CTX --> SVC["Services<br/>(User, Moment, etc.)"]
 
     CE --> WE
+
+    PROMPT -->|"receives"| CTX
 
     CVE -->|"future: extract via"| MEE["Memory Extraction Engine"]
     MEE -->|"future: persist via"| ME
@@ -51,6 +55,13 @@ flowchart TD
     CS --> DB
     RS --> DB
     MS --> DB
+
+    PROMPT -. "NEVER calls LLM" .-> LLM["LLM Provider<br/>(OpenAI, Claude, etc.)"]
+
+    classDef engine fill:#4a90e2,stroke:#2c5aa0,color:#fff
+    classDef forbidden fill:#c0392b,stroke:#8b0000,color:#fff
+    class WE,CE,RE,ME,MEE,CTX,PROMPT engine
+    class LLM forbidden
 ```
 
 ---

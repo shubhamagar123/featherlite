@@ -29,6 +29,7 @@ Featherlight is organized into **6 architectural layers** and **6 core engines**
 - **Memory Engine** — Memory retrieval and ranking
 - **Memory Extraction Engine** — Entity extraction, importance detection, categorization
 - **Context Engine** — Aggregation boundary (6 concurrent providers, graceful degradation)
+- **Prompt Engine** — LLM-agnostic prompt construction (context injection, rules, compression)
 
 **See [ARCHITECTURE.md](./ARCHITECTURE.md) for complete dependency graphs, folder tree, and design principles.**
 
