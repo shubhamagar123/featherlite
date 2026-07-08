@@ -1,32 +1,85 @@
-import type { IRelationshipEngine } from './interfaces/relationship-engine.interface';
+/**
+ * RelationshipFactory — dependency-injection wiring for the Relationship Engine.
+ *
+ * Mirrors the World/Companion factory pattern: a cached singleton assembled from
+ * the relationship service, default context/evaluator/updater/strategy implementations,
+ * and the Context Engine. Overrides are supported for tests, with an explicit reset.
+ */
 
+import { getDatabaseServices, ServiceContainer } from '@services/factory';
+import { IRelationshipService } from '@services/relationship/relationship.service.interface';
+import { getContextEngine, IContextEngine } from '@engines/context';
+
+import { RelationshipEngine } from './relationship.engine';
+import type { IRelationshipEngine } from './interfaces/relationship-engine.interface';
+import type { IRelationshipContext } from './interfaces/relationship-context.interface';
+import type { IRelationshipEvaluator } from './interfaces/relationship-evaluator.interface';
+import type { IRelationshipUpdater } from './interfaces/relationship-updater.interface';
+import type { IRelationshipEvolutionStrategy } from './interfaces/relationship-strategy.interface';
+import { RelationshipContext } from './context/relationship.context';
+import { RelationshipEvaluator } from './evaluator/relationship.evaluator';
+import { RelationshipUpdater } from './updater/relationship.updater';
+import { DefaultEvolutionStrategy } from './strategies/default-evolution.strategy';
+
+/** Overridable dependencies for constructing the engine. */
 export interface RelationshipEngineDeps {
-  relationshipEngine?: IRelationshipEngine;
+  relationshipService?: IRelationshipService;
+  contextEngine?: IContextEngine;
+  relationshipContext?: IRelationshipContext;
+  evaluator?: IRelationshipEvaluator;
+  updater?: IRelationshipUpdater;
+  strategy?: IRelationshipEvolutionStrategy;
 }
 
 let cached: IRelationshipEngine | null = null;
 
-export function getRelationshipEngine(
-  _deps: RelationshipEngineDeps = {}
-): IRelationshipEngine {
-  if (_deps.relationshipEngine) {
-    return _deps.relationshipEngine;
-  }
-
-  if (cached) {
+/**
+ * Build (or return the cached) Relationship Engine wired to the service layer
+ * and Context Engine.
+ *
+ * @param deps - Optional overrides (mainly for tests).
+ */
+export function getRelationshipEngine(deps: RelationshipEngineDeps = {}): IRelationshipEngine {
+  if (cached && !hasOverrides(deps)) {
     return cached;
   }
 
-  throw new Error(
-    'RelationshipEngine: no implementation registered yet. ' +
-      'Call getRelationshipEngine({ relationshipEngine }) with a concrete instance first.'
-  );
+  const services: ServiceContainer = getDatabaseServices();
+  const relationshipService = deps.relationshipService ?? services.relationshipService;
+  const contextEngine = deps.contextEngine ?? getContextEngine();
+  const relationshipContext = deps.relationshipContext ?? new RelationshipContext();
+  const evaluator = deps.evaluator ?? new RelationshipEvaluator(relationshipContext);
+  const updater = deps.updater ?? new RelationshipUpdater(relationshipContext);
+  const strategy = deps.strategy ?? new DefaultEvolutionStrategy(evaluator, updater);
+
+  const engine = new RelationshipEngine({
+    relationshipService,
+    contextEngine,
+    relationshipContext,
+    evaluator,
+    updater,
+    strategy,
+  });
+
+  if (!hasOverrides(deps)) {
+    cached = engine;
+  }
+
+  return engine;
 }
 
-export function registerRelationshipEngine(engine: IRelationshipEngine): void {
-  cached = engine;
-}
-
+/** Reset the cached engine (used by tests to isolate state). */
 export function resetRelationshipEngine(): void {
   cached = null;
+}
+
+function hasOverrides(deps: RelationshipEngineDeps): boolean {
+  return Boolean(
+    deps.relationshipService ||
+      deps.contextEngine ||
+      deps.relationshipContext ||
+      deps.evaluator ||
+      deps.updater ||
+      deps.strategy
+  );
 }
