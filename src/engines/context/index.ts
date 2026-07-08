@@ -1,9 +1,9 @@
 /**
  * Context Engine public API.
  *
- * Import from `@engines/context`. The Conversation Engine (future) should depend
+ * Import from `@engines/context`. The Interaction Engine should depend
  * on ONLY this module — specifically on `IContextEngine` and the
- * `ConversationContextDTO` it returns.
+ * `InteractionContextDTO` it returns.
  */
 
 // Factory (composition root)
@@ -33,6 +33,7 @@ export type {
 // DTOs
 export type {
   ContextRequest,
+  InteractionContextDTO,
   ConversationContextDTO,
   ContextMeta,
   ContextProviderReport,

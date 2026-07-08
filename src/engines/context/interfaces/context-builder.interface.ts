@@ -3,14 +3,14 @@
  *
  * The builder is the assembly mechanism: it runs every provider, times each,
  * applies the required/optional degradation policy, and composes a single
- * `ConversationContextDTO`. It contains no source-specific knowledge — that
+ * `InteractionContextDTO`. It contains no source-specific knowledge — that
  * lives entirely in the providers.
  */
 
 import { IResult } from '@services/types/result.type';
 import {
   ContextRequest,
-  ConversationContextDTO,
+  InteractionContextDTO,
   UserContextSlice,
   CompanionContextSlice,
   WorldContextSlice,
@@ -31,6 +31,6 @@ export interface ContextProviderSet {
 }
 
 export interface IContextBuilder {
-  /** Assemble the complete conversation context for a request. */
-  build(request: ContextRequest): Promise<IResult<ConversationContextDTO>>;
+  /** Assemble the complete interaction context for a request. */
+  build(request: ContextRequest): Promise<IResult<InteractionContextDTO>>;
 }

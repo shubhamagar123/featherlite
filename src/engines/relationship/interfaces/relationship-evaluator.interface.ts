@@ -4,7 +4,7 @@ import {
   InteractionEvaluationResult,
   GrowthFactorScore,
 } from '../dtos/relationship.dtos';
-import type { ConversationContextDTO } from '@engines/context';
+import type { InteractionContextDTO } from '@engines/context';
 
 export interface IRelationshipEvaluator {
   /**
@@ -18,6 +18,6 @@ export interface IRelationshipEvaluator {
   scoreGrowthFactors(
     userId: string,
     companionId: string,
-    conversationContext: ConversationContextDTO
+    conversationContext: InteractionContextDTO
   ): Promise<IResult<GrowthFactorScore>>;
 }

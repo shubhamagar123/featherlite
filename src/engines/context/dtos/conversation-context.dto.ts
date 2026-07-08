@@ -1,13 +1,13 @@
 /**
- * Conversation Context DTOs.
+ * Interaction Context DTOs.
  *
- * The `ConversationContextDTO` is the single, self-contained object the
- * Conversation Engine consumes. It is assembled by the Context Engine from
- * independent providers. The Conversation Engine must NEVER reach past this
+ * The `InteractionContextDTO` is the single, self-contained object the
+ * Interaction Engine consumes. It is assembled by the Context Engine from
+ * independent providers. The Interaction Engine must NEVER reach past this
  * object to the World Engine, Companion Engine, or any service.
  *
  * Each source contributes one "slice". Slices are deliberately curated (not raw
- * service/engine DTOs) so the conversation side is decoupled from upstream
+ * service/engine DTOs) so the interaction side is decoupled from upstream
  * shapes and each slice can carry an `available` flag for graceful degradation.
  */
 
@@ -151,10 +151,10 @@ export interface ContextMeta {
 }
 
 /**
- * The complete runtime context for a conversation. This is the ONLY object the
- * Conversation Engine receives.
+ * The complete runtime context for an interaction. This is the ONLY object the
+ * Interaction Engine receives.
  */
-export interface ConversationContextDTO {
+export interface InteractionContextDTO {
   requestId: string;
   userId: string;
   companionId: string;
@@ -169,3 +169,6 @@ export interface ConversationContextDTO {
 
   meta: ContextMeta;
 }
+
+// Backward compatibility alias for services layer
+export type ConversationContextDTO = InteractionContextDTO;

@@ -1,5 +1,5 @@
 import { PromptRole, PromptType, PromptStrategy, CompressionLevel, PromptStatus } from '../enums/prompt.enums';
-import type { ConversationContextDTO } from '@engines/context';
+import type { InteractionContextDTO } from '@engines/context';
 
 /** A single segment within a prompt (e.g., system context, memory injection, etc.). */
 export interface PromptSegment {
@@ -38,7 +38,7 @@ export interface PromptTemplate {
 
 /** Context passed to prompt builder. */
 export interface PromptBuildContext {
-  conversationContext: ConversationContextDTO;
+  conversationContext: InteractionContextDTO;
   promptType: PromptType;
   strategy: PromptStrategy;
   compressionLevel?: CompressionLevel;

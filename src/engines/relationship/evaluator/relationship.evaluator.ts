@@ -18,7 +18,7 @@ import {
 import { IRelationshipEvaluator } from '../interfaces/relationship-evaluator.interface';
 import { IRelationshipContext } from '../interfaces/relationship-context.interface';
 import { RelationshipDimensionType, InteractionQuality } from '../enums/relationship.enums';
-import type { ConversationContextDTO } from '@engines/context';
+import type { InteractionContextDTO } from '@engines/context';
 import { v4 as uuid } from 'uuid';
 
 export class RelationshipEvaluator implements IRelationshipEvaluator {
@@ -65,7 +65,7 @@ export class RelationshipEvaluator implements IRelationshipEvaluator {
   async scoreGrowthFactors(
     _userId: string,
     _companionId: string,
-    _conversationContext: ConversationContextDTO
+    _conversationContext: InteractionContextDTO
   ): Promise<IResult<GrowthFactorScore>> {
     return Result.success({
       conversationQuality: 5,

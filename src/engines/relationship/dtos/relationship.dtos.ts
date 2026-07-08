@@ -6,7 +6,7 @@ import {
   GrowthStrategyType,
   RelationshipPhase,
 } from '../enums/relationship.enums';
-import type { ConversationContextDTO } from '@engines/context';
+import type { InteractionContextDTO } from '@engines/context';
 
 /** Single relationship dimension state. */
 export interface RelationshipDimension {
@@ -58,7 +58,7 @@ export interface RelationshipSnapshot {
 
 /** Request to evaluate an interaction. */
 export interface InteractionEvaluationInput {
-  conversationContext: ConversationContextDTO;
+  conversationContext: InteractionContextDTO;
   quality: InteractionQuality;
   eventType: RelationshipEventType;
   metadata?: Record<string, unknown>;

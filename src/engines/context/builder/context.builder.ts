@@ -16,7 +16,7 @@ import {
   ContextMeta,
   ContextProviderReport,
   ContextRequest,
-  ConversationContextDTO,
+  InteractionContextDTO,
 } from '../dtos/conversation-context.dto';
 import { IContextBuilder, ContextProviderSet } from '../interfaces/context-builder.interface';
 import { IContextProvider } from '../interfaces/context-provider.interface';
@@ -38,7 +38,7 @@ export class ContextBuilder implements IContextBuilder {
     this.logger = createLogger('ContextBuilder');
   }
 
-  async build(request: ContextRequest): Promise<IResult<ConversationContextDTO>> {
+  async build(request: ContextRequest): Promise<IResult<InteractionContextDTO>> {
     const startedAt = Date.now();
     const referenceDate = request.referenceDate ?? this.clock.now();
     const timezone = request.timezone ?? request.world?.timezone ?? 'UTC';
@@ -71,7 +71,7 @@ export class ContextBuilder implements IContextBuilder {
     const reports: ContextProviderReport[] = [];
     const degraded: string[] = [];
 
-    const context: ConversationContextDTO = {
+    const context: InteractionContextDTO = {
       requestId: `ctx_${request.userId}_${request.companionId}_${referenceDate.getTime()}`,
       userId: request.userId,
       companionId: request.companionId,

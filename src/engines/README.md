@@ -18,7 +18,8 @@ rules. Engines speak to each other through well-defined interfaces.
 | **Relationship Engine** | Manage relationship state between user & companion | Relationship snapshots, storage & retrieval |
 | **Memory Engine**       | Retrieve critical memories for conversation      | Memory retrieval & ranking (storage only) |
 | **Memory Extraction Engine** | Extract & classify memories from events    | Entity extraction, importance, categorization |
-| **Context Engine**      | Assemble complete conversation runtime context  | Provider orchestration, degradation policy |
+| **Context Engine**      | Assemble complete interaction runtime context   | Provider orchestration, degradation policy |
+| **Interaction Engine**  | Orchestrate all user-companion interactions     | Text, voice, activities, presence, streaming, etc. |
 | **Prompt Engine**       | Build production-ready prompts for any LLM       | Prompt construction, context injection, rules, compression |
 
 ---
@@ -27,10 +28,10 @@ rules. Engines speak to each other through well-defined interfaces.
 
 ```mermaid
 flowchart TD
-    CVE["Conversation Engine<br/>(future)"]
+    IE["Interaction Engine<br/>(Text, Voice, Activities, Presence, etc.)"]
 
-    CVE -->|"ONLY dependency"| CTX["Context Engine"]
-    CVE -->|"build prompts via"| PROMPT["Prompt Engine"]
+    IE -->|"ONLY dependency"| CTX["Context Engine"]
+    IE -->|"build prompts via"| PROMPT["Prompt Orchestrator"]
 
     CTX --> WE["World Engine"]
     CTX --> CE["Companion Engine"]
@@ -42,8 +43,8 @@ flowchart TD
 
     PROMPT -->|"receives"| CTX
 
-    CVE -->|"future: extract via"| MEE["Memory Extraction Engine"]
-    MEE -->|"future: persist via"| ME
+    IE -->|"extract via"| MEE["Memory Extraction Engine"]
+    MEE -->|"persist via"| ME
 
     WE --> WS["World Service"]
     CE --> CS["Companion Service"]
@@ -60,7 +61,7 @@ flowchart TD
 
     classDef engine fill:#4a90e2,stroke:#2c5aa0,color:#fff
     classDef forbidden fill:#c0392b,stroke:#8b0000,color:#fff
-    class WE,CE,RE,ME,MEE,CTX,PROMPT engine
+    class WE,CE,RE,ME,MEE,CTX,PROMPT,IE engine
     class LLM forbidden
 ```
 
@@ -70,12 +71,12 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    CVE["Conversation Engine<br/>(future)"]
+    IE["Interaction Engine<br/>(Text, Voice, Activities, Presence, etc.)"]
     MEE["Memory Extraction Engine<br/>(Decision)<br/>- Extract entities<br/>- Detect importance<br/>- Detect expiry<br/>- Categorize"]
     ME["Memory Engine<br/>(Storage)<br/>- Retrieve critical<br/>- Rank & serve"]
     MS["Memory Service<br/>(CRUD)"]
 
-    CVE -->|"raw input"| MEE
+    IE -->|"raw input"| MEE
     MEE -->|"MemoryExtractionResultDTO"| ME
     ME -->|"persist"| MS
     ME -->|"retrieve for context"| CTX["Context Engine"]
@@ -130,6 +131,25 @@ src/engines/
 │   ├── builder/
 │   ├── context.factory.ts
 │   └── ...
+├── interaction/             # User-companion interaction orchestration
+│   ├── interfaces/
+│   ├── managers/
+│   ├── dtos/
+│   ├── enums/
+│   ├── context/
+│   ├── rules/
+│   ├── state/
+│   ├── interaction-orchestrator.ts
+│   ├── interaction-orchestrator.factory.ts
+│   └── ...
+├── prompt/                  # Prompt orchestration pipeline
+│   ├── interfaces/
+│   ├── dtos/
+│   ├── enums/
+│   ├── strategies/
+│   ├── prompt-orchestrator.ts
+│   ├── prompt-orchestrator.factory.ts
+│   └── ...
 └── README.md
 ```
 
@@ -150,7 +170,8 @@ Engines orchestrate services but **never** touch Prisma directly. Services
 handle CRUD; engines handle business logic.
 
 ### 4. Boundary Enforcement
-- **Conversation Engine** sees **only** Context Engine.
+- **Interaction Engine** sees **only** Context Engine (for context) and delegates
+  to Prompt Orchestrator for prompt building.
 - **Context Engine** aggregates from World, Companion, Relationship, Memory,
   and Services.
 - Memory flow: Extraction Engine (decides) → Memory Engine (stores) → Service
@@ -198,5 +219,6 @@ expect(result.isSuccess).toBe(false); // required provider failed
    scoring, and expiry rules. (No LLM logic in scaffold.)
 2. **Memory Engine Implementation**: Bridge to Memory Service; add ranking,
    recall scoring, decay.
-3. **Conversation Engine**: Consume Context Engine exclusively.
+3. **Interaction Engine Enhancement**: Implement full manager capabilities,
+   session persistence, and event streaming.
 4. **Additional Engines**: Dream Engine, Notification Engine, etc.
