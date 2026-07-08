@@ -1,6 +1,7 @@
 import { EventEnvelope, EventMetadata, EventContext, DomainEventPayload } from '../dto/event.dto';
 import { EventType, EventPriority, EventStatus, AggregateType } from '../enums/event.enums';
 import { randomUUID } from 'crypto';
+import { getEnvironment } from '@config/environment';
 
 export class EventFactory {
   static createEnvelope<T extends DomainEventPayload = Record<string, any>>(
@@ -29,7 +30,7 @@ export class EventFactory {
         companionId: context.companionId,
         priority,
         source: 'domain',
-        environment: process.env.NODE_ENV || 'development',
+        environment: getEnvironment().NODE_ENV,
       },
       aggregateId,
       aggregateType,

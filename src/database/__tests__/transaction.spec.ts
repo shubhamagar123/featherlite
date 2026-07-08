@@ -53,25 +53,29 @@ describe('Transaction Utilities', () => {
   });
 
   describe('transactionWithTimeout', () => {
-    beforeEach(() => {
-      jest.useFakeTimers();
-    });
-
-    afterEach(() => {
-      jest.runOnlyPendingTimers();
-      jest.useRealTimers();
-    });
-
-    it('should timeout if transaction exceeds time limit', async () => {
-      (prisma.$transaction as jest.Mock).mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve('result'), 10000))
+    it('should forward timeout option to prisma.$transaction', async () => {
+      (prisma.$transaction as jest.Mock).mockImplementation((callback) =>
+        Promise.resolve(callback(prisma))
       );
 
-      const promise = transactionWithTimeout(async () => 'result', 1000);
+      const result = await transactionWithTimeout(async () => 'result', 1000);
 
-      jest.advanceTimersByTime(1001);
+      expect(result).toBe('result');
+      expect(prisma.$transaction).toHaveBeenCalledWith(
+        expect.any(Function),
+        { timeout: 1000 }
+      );
+    });
 
-      await expect(promise).rejects.toThrow('Transaction timeout');
+    it('should propagate timeout errors emitted by prisma', async () => {
+      // Prisma raises an error (P2028) when the native timeout fires.
+      // We verify the error surfaces to the caller unchanged.
+      const timeoutError = new Error('Transaction API error: Transaction exceeded timeout');
+      (prisma.$transaction as jest.Mock).mockRejectedValue(timeoutError);
+
+      await expect(transactionWithTimeout(async () => 'result', 1000)).rejects.toThrow(
+        'Transaction exceeded timeout'
+      );
     });
   });
 

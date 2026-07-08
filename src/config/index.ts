@@ -1,1 +1,9 @@
-export { environment, type Environment } from './environment';
+export {
+  environment,
+  getEnvironment,
+  getDatabaseConfig,
+  getRedisConfig,
+  getAuthConfig,
+  loadEnvironment,
+  type Environment,
+} from './environment';

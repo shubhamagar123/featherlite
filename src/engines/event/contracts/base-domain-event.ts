@@ -1,6 +1,7 @@
 import { EventEnvelope, EventMetadata, EventContext, DomainEventPayload } from '../dto/event.dto';
 import { EventType, EventPriority, EventStatus, AggregateType } from '../enums/event.enums';
 import { randomUUID } from 'crypto';
+import { getEnvironment } from '@config/environment';
 
 export abstract class BaseDomainEvent<T extends DomainEventPayload = Record<string, any>> {
   protected envelope: EventEnvelope<T>;
@@ -33,7 +34,7 @@ export abstract class BaseDomainEvent<T extends DomainEventPayload = Record<stri
         companionId: context.companionId,
         priority,
         source: 'domain',
-        environment: process.env.NODE_ENV || 'development',
+        environment: getEnvironment().NODE_ENV,
       },
       aggregateId,
       aggregateType,

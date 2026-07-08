@@ -18,11 +18,11 @@ const defaults: Record<string, string> = {
   AWS_ACCESS_KEY_ID: 'test-access-key',
   AWS_SECRET_ACCESS_KEY: 'test-secret-key',
   S3_BUCKET_NAME: 'test-bucket',
-  JWT_SECRET: 'test-jwt-secret',
-  JWT_REFRESH_SECRET: 'test-jwt-refresh-secret',
+  JWT_SECRET: 'test-jwt-secret-min-32-chars-padded!!',
+  JWT_REFRESH_SECRET: 'test-jwt-refresh-secret-min-32-chars!',
   EMAIL_FROM: 'noreply@featherlight.test',
   EMAIL_FROM_NAME: 'Featherlight Test',
-  SESSION_SECRET: 'test-session-secret',
+  SESSION_SECRET: 'test-session-secret-min-32-chars-pad!',
 };
 
 for (const [key, value] of Object.entries(defaults)) {
