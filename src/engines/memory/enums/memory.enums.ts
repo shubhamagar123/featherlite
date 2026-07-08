@@ -1,0 +1,49 @@
+export enum MemoryType {
+  PERSON = 'PERSON',
+  RELATIONSHIP = 'RELATIONSHIP',
+  PREFERENCE = 'PREFERENCE',
+  ROUTINE = 'ROUTINE',
+  HEALTH = 'HEALTH',
+  WORK = 'WORK',
+  TRAVEL = 'TRAVEL',
+  FOOD = 'FOOD',
+  GOAL = 'GOAL',
+  HABIT = 'HABIT',
+  EVENT = 'EVENT',
+  CONTEXT = 'CONTEXT',
+  TEMPORARY = 'TEMPORARY',
+  LONG_TERM = 'LONG_TERM',
+  CONVERSATION_CALLBACK = 'CONVERSATION_CALLBACK',
+}
+
+export enum MemoryStatus {
+  ACTIVE = 'ACTIVE',
+  ARCHIVED = 'ARCHIVED',
+  EXPIRED = 'EXPIRED',
+  CONFLICTED = 'CONFLICTED',
+}
+
+export enum MemoryVisibility {
+  PRIVATE = 'PRIVATE',
+  SHARED = 'SHARED',
+  PUBLIC = 'PUBLIC',
+}
+
+export enum EntityType {
+  PERSON = 'PERSON',
+  PLACE = 'PLACE',
+  THING = 'THING',
+  CONCEPT = 'CONCEPT',
+  EVENT = 'EVENT',
+  ORGANIZATION = 'ORGANIZATION',
+  DATE = 'DATE',
+  NUMBER = 'NUMBER',
+}
+
+export enum SearchType {
+  SEMANTIC = 'SEMANTIC',
+  KEYWORD = 'KEYWORD',
+  ENTITY = 'ENTITY',
+  TIMELINE = 'TIMELINE',
+  RECENT = 'RECENT',
+}
