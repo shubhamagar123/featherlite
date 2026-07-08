@@ -1,13 +1,13 @@
 /**
  * RelationshipFactory — dependency-injection wiring for the Relationship Engine.
  *
- * Mirrors the World/Companion factory pattern: a cached singleton assembled from
- * the relationship service, default context/evaluator/updater/strategy implementations,
- * and the Context Engine. Overrides are supported for tests, with an explicit reset.
+ * Wires the relationship service, evaluator, updater, strategy, and Event Engine.
+ * Overrides are supported for tests, with an explicit reset.
  */
 
 import { getDatabaseServices, ServiceContainer } from '@services/factory';
 import { IRelationshipService } from '@services/relationship/relationship.service.interface';
+import { getEventEngine, EventEngine } from '@engines/event';
 
 import { RelationshipEngine } from './relationship.engine';
 import type { IRelationshipEngine } from './interfaces/relationship-engine.interface';
@@ -24,13 +24,14 @@ export interface RelationshipEngineDeps {
   evaluator?: IRelationshipEvaluator;
   updater?: IRelationshipUpdater;
   strategy?: IRelationshipEvolutionStrategy;
+  eventEngine?: EventEngine;
 }
 
 let cached: IRelationshipEngine | null = null;
 
 /**
- * Build (or return the cached) Relationship Engine wired to the service layer
- * and Context Engine.
+ * Build (or return the cached) Relationship Engine wired to the service layer,
+ * Event Engine, and Context Engine.
  *
  * @param deps - Optional overrides (mainly for tests).
  */
@@ -44,12 +45,14 @@ export function getRelationshipEngine(deps: RelationshipEngineDeps = {}): IRelat
   const evaluator = deps.evaluator ?? new RelationshipEvaluator();
   const updater = deps.updater ?? new RelationshipUpdater();
   const strategy = deps.strategy ?? new DefaultEvolutionStrategy(updater);
+  const eventEngine = deps.eventEngine ?? getEventEngine();
 
   const engine = new RelationshipEngine({
     relationshipService,
     evaluator,
     updater,
     strategy,
+    eventEngine,
   });
 
   if (!hasOverrides(deps)) {
@@ -69,6 +72,7 @@ function hasOverrides(deps: RelationshipEngineDeps): boolean {
     deps.relationshipService ||
       deps.evaluator ||
       deps.updater ||
-      deps.strategy
+      deps.strategy ||
+      deps.eventEngine
   );
 }

@@ -1,0 +1,23 @@
+EventType,AggregateType,EventName,PublishedBy,Status,Priority,Subscribers,Description
+USER_CREATED,USER,User Created,UserEngine (Future),Seed,NORMAL,"RelationshipEngine, AnalyticsEngine, NotificationEngine",User account created
+USER_UPDATED,USER,User Updated,UserEngine (Future),Seed,NORMAL,"AnalyticsEngine, NotificationEngine",User profile updated
+RELATIONSHIP_UPDATED,RELATIONSHIP,Relationship Created,RelationshipEngine.createRelationship(),✅ Published,HIGH,"AnalyticsEngine, NotificationEngine, HistoryEngine",New relationship initiated between user and companion
+RELATIONSHIP_UPDATED,RELATIONSHIP,Relationship Updated,RelationshipEngine.recordEvent(),✅ Published,NORMAL,"AnalyticsEngine, NotificationEngine, HistoryEngine",Relationship status or phase changed
+RELATIONSHIP_DIMENSION_CHANGED,RELATIONSHIP,Relationship Dimension Changed,RelationshipEngine.recordEvent(),✅ Published,NORMAL,"AnalyticsEngine, NotificationEngine, HistoryEngine, MemoryEngine",Individual relationship dimension value changed (TRUST, COMFORT, etc.)
+CONVERSATION_STARTED,CONVERSATION,Conversation Started,ConversationEngine (Future),Seed,NORMAL,"RelationshipEngine, AnalyticsEngine, HistoryEngine",New conversation initiated between user and companion
+CONVERSATION_ENDED,CONVERSATION,Conversation Ended,ConversationEngine (Future),Seed,NORMAL,"RelationshipEngine, AnalyticsEngine, NotificationEngine, HistoryEngine",Conversation concluded
+MESSAGE_SENT,MESSAGE,Message Sent,MessageEngine (Future),Seed,NORMAL,"RelationshipEngine, ConversationEngine, AnalyticsEngine, HistoryEngine",Message sent by user or companion
+MESSAGE_RECEIVED,MESSAGE,Message Received,MessageEngine (Future),Seed,NORMAL,"NotificationEngine, AnalyticsEngine",Message received by user or companion
+MEMORY_CREATED,MEMORY,Memory Created,MemoryEngine (Future),Seed,NORMAL,"RelationshipEngine, AnalyticsEngine, HistoryEngine",New memory recorded between user and companion
+MEMORY_EXPIRED,MEMORY,Memory Expired,MemoryEngine (Future),Seed,NORMAL,"RelationshipEngine, HistoryEngine",Memory faded/expired from relationship
+MOMENT_TRIGGERED,MOMENT,Moment Triggered,MomentEngine (Future),Seed,HIGH,"RelationshipEngine, NotificationEngine, AnalyticsEngine","Significant moment detected in relationship"
+NOTIFICATION_SCHEDULED,NOTIFICATION,Notification Scheduled,NotificationEngine (Future),Seed,NORMAL,"AnalyticsEngine, HistoryEngine",Notification queued for delivery
+NOTIFICATION_SENT,NOTIFICATION,Notification Sent,NotificationEngine (Future),Seed,NORMAL,"AnalyticsEngine, HistoryEngine",Notification delivered to user
+WORLD_GENERATED,WORLD,World Generated,WorldEngine (Future),Seed,NORMAL,"AnalyticsEngine, HistoryEngine",Companion's world state generated
+WORLD_UPDATED,WORLD,World Updated,WorldEngine (Future),Seed,NORMAL,"AnalyticsEngine, NotificationEngine, HistoryEngine",Companion's world state updated
+COMPANION_CHANGED,COMPANION,Companion Changed,CompanionEngine (Future),Seed,NORMAL,"RelationshipEngine, AnalyticsEngine, NotificationEngine",Companion configuration or identity changed
+COMPANION_STATE_CHANGED,COMPANION,Companion State Changed,CompanionEngine (Future),Seed,NORMAL,"NotificationEngine, AnalyticsEngine","Companion availability or status changed (online/offline/busy)"
+INTERACTION_STARTED,INTERACTION,Interaction Started,InteractionEngine (Future),Seed,NORMAL,"RelationshipEngine, AnalyticsEngine",User-companion interaction session began
+INTERACTION_ENDED,INTERACTION,Interaction Ended,InteractionEngine (Future),Seed,NORMAL,"RelationshipEngine, AnalyticsEngine, NotificationEngine",User-companion interaction session ended
+PROMPT_BUILT,PROMPT,Prompt Built,PromptEngine (Future),Seed,NORMAL,"AnalyticsEngine, HistoryEngine",LLM prompt constructed for companion
+LLM_RESPONSE_GENERATED,PROMPT,LLM Response Generated,LLMEngine (Future),Seed,NORMAL,"RelationshipEngine, AnalyticsEngine, HistoryEngine",LLM response generated for interaction

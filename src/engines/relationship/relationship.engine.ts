@@ -13,6 +13,8 @@
 
 import { IResult, Result } from '@services/types/result.type';
 import { IRelationshipService } from '@services/relationship/relationship.service.interface';
+import { createLogger } from '@utils/logger';
+import type { Logger } from 'pino';
 
 import {
   RelationshipState,
@@ -31,12 +33,23 @@ import { IRelationshipEngine } from './interfaces/relationship-engine.interface'
 import { IRelationshipEvaluator } from './interfaces/relationship-evaluator.interface';
 import { IRelationshipUpdater } from './interfaces/relationship-updater.interface';
 import { IRelationshipEvolutionStrategy } from './interfaces/relationship-strategy.interface';
+import { EventEngine } from '@engines/event';
+import {
+  EventFactory,
+  EventContextBuilder,
+  RelationshipCreatedEvent,
+  RelationshipUpdatedEvent,
+  RelationshipDimensionChangedEvent,
+  AggregateType,
+  EventDispatchMode,
+} from '@engines/event';
 
 export interface RelationshipEngineDeps {
   relationshipService: IRelationshipService;
   evaluator: IRelationshipEvaluator;
   updater: IRelationshipUpdater;
   strategy?: IRelationshipEvolutionStrategy;
+  eventEngine?: EventEngine;
 }
 
 export class RelationshipEngine implements IRelationshipEngine {
@@ -44,12 +57,17 @@ export class RelationshipEngine implements IRelationshipEngine {
   private readonly evaluator: IRelationshipEvaluator;
   private readonly updater: IRelationshipUpdater;
   private readonly strategy: IRelationshipEvolutionStrategy | undefined;
+  private readonly eventEngine?: EventEngine;
+  private readonly logger: Logger;
+  private previousSnapshots: Map<string, RelationshipSnapshot> = new Map();
 
   constructor(deps: RelationshipEngineDeps) {
     this.relationshipService = deps.relationshipService;
     this.evaluator = deps.evaluator;
     this.updater = deps.updater;
     this.strategy = deps.strategy;
+    this.eventEngine = deps.eventEngine;
+    this.logger = createLogger('RelationshipEngine');
   }
 
   async createRelationship(userId: string, companionId: string): Promise<IResult<RelationshipState>> {
@@ -66,7 +84,29 @@ export class RelationshipEngine implements IRelationshipEngine {
       }
 
       const dto = createResult.value!;
-      return this.buildRelationshipState(userId, companionId, dto.id);
+      const relationshipState = await this.buildRelationshipState(userId, companionId, dto.id);
+
+      if (this.eventEngine) {
+        const context = EventContextBuilder.create()
+          .withUserId(userId)
+          .withCompanionId(companionId)
+          .build();
+
+        const event = new RelationshipCreatedEvent(
+          dto.id,
+          {
+            userId,
+            companionId,
+            status: 'INITIATED',
+            phase: 'INITIAL_ATTRACTION',
+          },
+          context
+        );
+
+        await this.eventEngine.publish(event.getEnvelope(), EventDispatchMode.ASYNC);
+      }
+
+      return relationshipState;
     });
   }
 
@@ -106,16 +146,32 @@ export class RelationshipEngine implements IRelationshipEngine {
         throw relationshipResult.error;
       }
 
-      const snapshot = this.createInitialSnapshot(userId, companionId, relationshipResult.value!.id);
+      const relationshipId = relationshipResult.value!.id;
+      const previousSnapshot = this.createInitialSnapshot(userId, companionId, relationshipId);
+      this.previousSnapshots.set(relationshipId, previousSnapshot);
+
+      const snapshot = this.createInitialSnapshot(userId, companionId, relationshipId);
       const updateResult = await this.updater.applyEvent(snapshot, event);
 
       if (updateResult.isFailure) {
         throw updateResult.error;
       }
 
-      await this.relationshipService.updateLastInteraction(relationshipResult.value!.id);
+      const updatedSnapshot = updateResult.value!;
+      await this.relationshipService.updateLastInteraction(relationshipId);
 
-      return updateResult.value!;
+      if (this.eventEngine) {
+        await this.publishDimensionChanges(
+          previousSnapshot,
+          updatedSnapshot,
+          userId,
+          companionId,
+          relationshipId
+        );
+        await this.publishRelationshipUpdate(updatedSnapshot, userId, companionId, relationshipId);
+      }
+
+      return updatedSnapshot;
     });
   }
 
@@ -253,5 +309,72 @@ export class RelationshipEngine implements IRelationshipEngine {
         lastEvaluationAt: new Date(),
       },
     };
+  }
+
+  private async publishDimensionChanges(
+    previousSnapshot: RelationshipSnapshot,
+    currentSnapshot: RelationshipSnapshot,
+    userId: string,
+    companionId: string,
+    relationshipId: string
+  ): Promise<void> {
+    if (!this.eventEngine) return;
+
+    const context = EventContextBuilder.create()
+      .withUserId(userId)
+      .withCompanionId(companionId)
+      .build();
+
+    for (const dimensionType of Object.values(RelationshipDimensionType)) {
+      const prevDim = previousSnapshot.dimensions[dimensionType];
+      const currDim = currentSnapshot.dimensions[dimensionType];
+
+      if (prevDim && currDim && prevDim.value !== currDim.value) {
+        const event = new RelationshipDimensionChangedEvent(
+          relationshipId,
+          {
+            userId,
+            companionId,
+            dimension: dimensionType,
+            oldValue: prevDim.value,
+            newValue: currDim.value,
+            change: currDim.value - prevDim.value,
+            reason: currDim.changeHistory[currDim.changeHistory.length - 1]?.reason || 'Unknown',
+          },
+          context
+        );
+
+        await this.eventEngine.publish(event.getEnvelope(), EventDispatchMode.ASYNC);
+      }
+    }
+  }
+
+  private async publishRelationshipUpdate(
+    snapshot: RelationshipSnapshot,
+    userId: string,
+    companionId: string,
+    relationshipId: string
+  ): Promise<void> {
+    if (!this.eventEngine) return;
+
+    const context = EventContextBuilder.create()
+      .withUserId(userId)
+      .withCompanionId(companionId)
+      .build();
+
+    const event = new RelationshipUpdatedEvent(
+      relationshipId,
+      {
+        userId,
+        companionId,
+        status: snapshot.status,
+        phase: snapshot.phase,
+        overallHealth: snapshot.overallHealth,
+        trajectory: snapshot.trajectory,
+      },
+      context
+    );
+
+    await this.eventEngine.publish(event.getEnvelope(), EventDispatchMode.ASYNC);
   }
 }
