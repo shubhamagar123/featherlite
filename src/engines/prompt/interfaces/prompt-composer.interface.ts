@@ -1,5 +1,5 @@
 import { IResult } from '@services/types/result.type';
-import { PromptPayload, PromptBuildContext, PromptSegment } from '../dtos/prompt.dtos';
+import { PromptPayload, PromptBuildContext } from '../dtos/prompt.dtos';
 
 export interface IPromptComposer {
   /**
