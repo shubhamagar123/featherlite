@@ -36,14 +36,14 @@ export interface RelationshipEngineDeps {
   relationshipService: IRelationshipService;
   evaluator: IRelationshipEvaluator;
   updater: IRelationshipUpdater;
-  strategy: IRelationshipEvolutionStrategy;
+  strategy?: IRelationshipEvolutionStrategy;
 }
 
 export class RelationshipEngine implements IRelationshipEngine {
   private readonly relationshipService: IRelationshipService;
   private readonly evaluator: IRelationshipEvaluator;
   private readonly updater: IRelationshipUpdater;
-  private readonly strategy: IRelationshipEvolutionStrategy;
+  private readonly strategy: IRelationshipEvolutionStrategy | undefined;
 
   constructor(deps: RelationshipEngineDeps) {
     this.relationshipService = deps.relationshipService;
@@ -134,6 +134,10 @@ export class RelationshipEngine implements IRelationshipEngine {
       }
 
       const snapshot = this.createInitialSnapshot(userId, companionId, relationshipResult.value!.id);
+      if (!this.strategy) {
+        return this.buildRelationshipState(userId, companionId, relationshipResult.value!.id);
+      }
+
       const strategyResult = this.strategy.recommendStrategy(snapshot);
 
       if (strategyResult.isFailure) {
@@ -189,10 +193,8 @@ export class RelationshipEngine implements IRelationshipEngine {
       RelationshipDimensionType.BOUNDARIES,
       RelationshipDimensionType.FAMILIARITY,
       RelationshipDimensionType.RELIABILITY,
-      RelationshipDimensionType.INSIDE_JOKES,
       RelationshipDimensionType.SUPPORTIVENESS,
       RelationshipDimensionType.RESPECT,
-      RelationshipDimensionType.OPENNESS,
     ];
 
     for (const type of dimensionTypes) {

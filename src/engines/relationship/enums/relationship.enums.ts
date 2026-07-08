@@ -1,4 +1,4 @@
-/** The 15 independent relationship dimensions. */
+/** The 12 independent relationship dimensions. */
 export enum RelationshipDimensionType {
   TRUST = 'TRUST',
   COMFORT = 'COMFORT',
@@ -10,10 +10,8 @@ export enum RelationshipDimensionType {
   BOUNDARIES = 'BOUNDARIES',
   FAMILIARITY = 'FAMILIARITY',
   RELIABILITY = 'RELIABILITY',
-  INSIDE_JOKES = 'INSIDE_JOKES',
   SUPPORTIVENESS = 'SUPPORTIVENESS',
   RESPECT = 'RESPECT',
-  OPENNESS = 'OPENNESS',
 }
 
 /** Relationship status. */

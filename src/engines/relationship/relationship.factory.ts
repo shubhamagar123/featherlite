@@ -11,11 +11,9 @@ import { IRelationshipService } from '@services/relationship/relationship.servic
 
 import { RelationshipEngine } from './relationship.engine';
 import type { IRelationshipEngine } from './interfaces/relationship-engine.interface';
-import type { IRelationshipContext } from './interfaces/relationship-context.interface';
 import type { IRelationshipEvaluator } from './interfaces/relationship-evaluator.interface';
 import type { IRelationshipUpdater } from './interfaces/relationship-updater.interface';
 import type { IRelationshipEvolutionStrategy } from './interfaces/relationship-strategy.interface';
-import { RelationshipContext } from './context/relationship.context';
 import { RelationshipEvaluator } from './evaluator/relationship.evaluator';
 import { RelationshipUpdater } from './updater/relationship.updater';
 import { DefaultEvolutionStrategy } from './strategies/default-evolution.strategy';
@@ -23,7 +21,6 @@ import { DefaultEvolutionStrategy } from './strategies/default-evolution.strateg
 /** Overridable dependencies for constructing the engine. */
 export interface RelationshipEngineDeps {
   relationshipService?: IRelationshipService;
-  relationshipContext?: IRelationshipContext;
   evaluator?: IRelationshipEvaluator;
   updater?: IRelationshipUpdater;
   strategy?: IRelationshipEvolutionStrategy;
@@ -44,9 +41,8 @@ export function getRelationshipEngine(deps: RelationshipEngineDeps = {}): IRelat
 
   const services: ServiceContainer = getDatabaseServices();
   const relationshipService = deps.relationshipService ?? services.relationshipService;
-  const relationshipContext = deps.relationshipContext ?? new RelationshipContext();
-  const evaluator = deps.evaluator ?? new RelationshipEvaluator(relationshipContext);
-  const updater = deps.updater ?? new RelationshipUpdater(relationshipContext);
+  const evaluator = deps.evaluator ?? new RelationshipEvaluator();
+  const updater = deps.updater ?? new RelationshipUpdater();
   const strategy = deps.strategy ?? new DefaultEvolutionStrategy(updater);
 
   const engine = new RelationshipEngine({
@@ -71,7 +67,6 @@ export function resetRelationshipEngine(): void {
 function hasOverrides(deps: RelationshipEngineDeps): boolean {
   return Boolean(
     deps.relationshipService ||
-      deps.relationshipContext ||
       deps.evaluator ||
       deps.updater ||
       deps.strategy

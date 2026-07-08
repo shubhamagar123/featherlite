@@ -1,198 +1,215 @@
 /**
- * RelationshipUpdater — applies events and decay to dimension values.
+ * RelationshipUpdater — applies events and decay to relationship snapshots.
  *
  * Responsibilities:
- * - Apply events to snapshots and update dimensions
- * - Calculate and apply decay due to inactivity
- * - Update dimension trends and change history
- * - Maintain dimension bounds (0-100)
+ * - Apply individual events to snapshots
+ * - Update dimension values based on impact
+ * - Apply decay for inactive periods
+ * - Maintain change history for each dimension
+ * - Calculate trends from historical data
+ * - Update relationship status based on health
  */
 
 import { IResult, Result } from '@services/types/result.type';
+import { createLogger } from '@utils/logger';
+import type { Logger } from 'pino';
+
 import {
   RelationshipSnapshot,
   RelationshipEvent,
-  RelationshipDimension,
 } from '../dtos/relationship.dtos';
 import { IRelationshipUpdater } from '../interfaces/relationship-updater.interface';
-import { IRelationshipContext } from '../interfaces/relationship-context.interface';
-import { RelationshipDimensionType } from '../enums/relationship.enums';
+import {
+  RelationshipDimensionType,
+  RelationshipStatus,
+  RelationshipPhase,
+} from '../enums/relationship.enums';
+import { RelationshipRules } from '../rules/relationship.rules';
 
 export class RelationshipUpdater implements IRelationshipUpdater {
-  constructor(private relationshipContext: IRelationshipContext) {}
+  private readonly logger: Logger;
+
+  constructor() {
+    this.logger = createLogger('RelationshipUpdater');
+  }
 
   async applyEvent(
     snapshot: RelationshipSnapshot,
     event: RelationshipEvent
   ): Promise<IResult<RelationshipSnapshot>> {
     return Result.tryAsync(async () => {
-      const updatedSnapshot = { ...snapshot };
       const updatedDimensions = { ...snapshot.dimensions };
+      const changedDimensions: Set<RelationshipDimensionType> = new Set();
 
-      for (const dimensionType of event.affectedDimensions) {
-        const currentDimension = updatedDimensions[dimensionType];
-        const rule = this.relationshipContext.getGrowthRule(dimensionType);
-        const impact = event.impact[dimensionType] || 0;
+      for (const dimension of event.affectedDimensions) {
+        const impact = event.impact[dimension] || 0;
+        const currentDim = updatedDimensions[dimension];
 
-        const newValue = Math.max(
-          rule.minValue,
-          Math.min(rule.maxValue, currentDimension.value + impact)
-        );
+        if (currentDim) {
+          const oldValue = currentDim.value;
+          const newValue = RelationshipRules.applyImpact(dimension, oldValue, impact);
 
-        const newTrend = this.calculateTrend(
-          currentDimension.changeHistory,
-          currentDimension.value,
-          newValue
-        );
+          if (RelationshipRules.isSignificantChange(oldValue, newValue)) {
+            changedDimensions.add(dimension);
+          }
 
-        updatedDimensions[dimensionType] = {
-          ...currentDimension,
-          value: newValue,
-          lastUpdated: event.timestamp,
-          changeHistory: [
-            ...currentDimension.changeHistory,
-            {
-              value: newValue,
-              timestamp: event.timestamp,
-              reason: event.description,
-            },
-          ].slice(-20),
-          trend: newTrend,
-        };
+          updatedDimensions[dimension] = {
+            ...currentDim,
+            value: newValue,
+            lastUpdated: new Date(),
+            changeHistory: [
+              ...currentDim.changeHistory,
+              {
+                value: newValue,
+                timestamp: new Date(),
+                reason: event.description,
+              },
+            ].slice(-30),
+            trend: RelationshipRules.calculateTrend(
+              [...currentDim.changeHistory, { value: newValue, timestamp: new Date() }],
+              7
+            ),
+          };
+        }
       }
 
-      updatedSnapshot.dimensions = updatedDimensions;
-      updatedSnapshot.overallHealth = this.calculateOverallHealth(updatedDimensions);
-      updatedSnapshot.trajectory = this.calculateTrajectory(updatedDimensions);
-      updatedSnapshot.strengths = this.getStrengths(updatedDimensions);
-      updatedSnapshot.vulnerabilities = this.getVulnerabilities(updatedDimensions);
-      updatedSnapshot.updatedAt = new Date();
+      const newSnapshot: RelationshipSnapshot = {
+        ...snapshot,
+        dimensions: updatedDimensions,
+        updatedAt: new Date(),
+      };
 
-      return updatedSnapshot;
+      this.updateSnapshotMetrics(newSnapshot);
+
+      this.logger.debug(
+        {
+          eventType: event.type,
+          changedDimensions: changedDimensions.size,
+          affectedDimensions: event.affectedDimensions.length,
+        },
+        'Applied event to snapshot'
+      );
+
+      return newSnapshot;
     });
   }
 
   async applyDecay(
     snapshot: RelationshipSnapshot,
-    daysSinceLastEvent: number
+    daysSinceLastInteraction: number
   ): Promise<IResult<RelationshipSnapshot>> {
     return Result.tryAsync(async () => {
-      if (daysSinceLastEvent <= 0) {
+      if (daysSinceLastInteraction <= 0) {
         return snapshot;
       }
 
-      const updatedSnapshot = { ...snapshot };
       const updatedDimensions = { ...snapshot.dimensions };
+      const now = new Date();
 
-      for (const dimensionType of Object.values(RelationshipDimensionType)) {
-        const currentDimension = updatedDimensions[dimensionType];
-        const rule = this.relationshipContext.getGrowthRule(dimensionType);
+      for (const dimension of Object.values(RelationshipDimensionType)) {
+        const currentDim = updatedDimensions[dimension];
+        if (currentDim) {
+          let newValue = currentDim.value;
 
-        const decayAmount = rule.decayRate * daysSinceLastEvent;
-        const newValue = Math.max(
-          rule.minValue,
-          Math.min(rule.maxValue, currentDimension.value - decayAmount)
-        );
+          for (let i = 0; i < daysSinceLastInteraction; i++) {
+            newValue = RelationshipRules.applyDecay(dimension, newValue);
+          }
 
-        if (newValue !== currentDimension.value) {
-          const newTrend = this.calculateTrend(
-            currentDimension.changeHistory,
-            currentDimension.value,
-            newValue
-          );
-
-          updatedDimensions[dimensionType] = {
-            ...currentDimension,
-            value: newValue,
-            lastUpdated: new Date(),
-            changeHistory: [
-              ...currentDimension.changeHistory,
-              {
-                value: newValue,
-                timestamp: new Date(),
-                reason: `Decay after ${daysSinceLastEvent} days of inactivity`,
-              },
-            ].slice(-20),
-            trend: newTrend,
-          };
+          if (newValue !== currentDim.value) {
+            updatedDimensions[dimension] = {
+              ...currentDim,
+              value: newValue,
+              lastUpdated: now,
+              changeHistory: [
+                ...currentDim.changeHistory,
+                {
+                  value: newValue,
+                  timestamp: now,
+                  reason: `Decay after ${daysSinceLastInteraction} inactive days`,
+                },
+              ].slice(-30),
+              trend: RelationshipRules.calculateTrend(
+                [
+                  ...currentDim.changeHistory,
+                  { value: newValue, timestamp: now },
+                ],
+                7
+              ),
+            };
+          }
         }
       }
 
-      updatedSnapshot.dimensions = updatedDimensions;
-      updatedSnapshot.overallHealth = this.calculateOverallHealth(updatedDimensions);
-      updatedSnapshot.trajectory = this.calculateTrajectory(updatedDimensions);
-      updatedSnapshot.updatedAt = new Date();
+      const newSnapshot: RelationshipSnapshot = {
+        ...snapshot,
+        dimensions: updatedDimensions,
+        updatedAt: now,
+      };
 
-      return updatedSnapshot;
+      this.updateSnapshotMetrics(newSnapshot);
+
+      this.logger.debug(
+        {
+          daysSinceLastInteraction,
+          overallHealth: newSnapshot.overallHealth,
+        },
+        'Applied decay to snapshot'
+      );
+
+      return newSnapshot;
     });
   }
 
-  private calculateTrend(
-    changeHistory: Array<{ value: number; timestamp: Date; reason: string }>,
-    previousValue: number,
-    newValue: number
-  ): number {
-    if (changeHistory.length < 2) {
-      if (newValue > previousValue) return 1;
-      if (newValue < previousValue) return -1;
-      return 0;
+  private updateSnapshotMetrics(snapshot: RelationshipSnapshot): void {
+    const dimensions = Object.values(snapshot.dimensions);
+    const values = dimensions.map(d => d.value);
+
+    snapshot.overallHealth = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+
+    const trends = dimensions.map(d => d.trend);
+    snapshot.trajectory = Math.round((trends.reduce((a, b) => a + b, 0) / trends.length) * 2) / 2;
+
+    const sorted = [...dimensions].sort((a, b) => b.value - a.value);
+    snapshot.strengths = sorted.slice(0, 3).map(d => d.type);
+    snapshot.vulnerabilities = sorted.slice(-3).map(d => d.type);
+
+    this.updateRelationshipStatus(snapshot);
+    this.updateRelationshipPhase(snapshot);
+  }
+
+  private updateRelationshipStatus(snapshot: RelationshipSnapshot): void {
+    const health = snapshot.overallHealth;
+
+    if (health < 20) {
+      snapshot.status = RelationshipStatus.ENDED;
+    } else if (health < 40) {
+      snapshot.status = RelationshipStatus.PAUSED;
+    } else if (health < 60) {
+      snapshot.status = RelationshipStatus.DEVELOPING;
+    } else if (health < 80) {
+      snapshot.status = RelationshipStatus.ESTABLISHED;
+    } else {
+      snapshot.status = RelationshipStatus.DEEPENING;
     }
+  }
 
-    const recent = changeHistory.slice(-3);
-    let upCount = 0;
-    let downCount = 0;
+  private updateRelationshipPhase(snapshot: RelationshipSnapshot): void {
+    const health = snapshot.overallHealth;
+    const trustLevel = snapshot.dimensions[RelationshipDimensionType.TRUST]?.value || 0;
+    const emotionalDepth =
+      snapshot.dimensions[RelationshipDimensionType.EMOTIONAL_DEPTH]?.value || 0;
 
-    for (let i = 1; i < recent.length; i++) {
-      if (recent[i].value > recent[i - 1].value) upCount++;
-      if (recent[i].value < recent[i - 1].value) downCount++;
+    if (health < 40) {
+      snapshot.phase = RelationshipPhase.INITIAL_ATTRACTION;
+    } else if (health < 50 || emotionalDepth < 30) {
+      snapshot.phase = RelationshipPhase.EXPLORATION;
+    } else if (health < 70 || trustLevel < 50) {
+      snapshot.phase = RelationshipPhase.DEEPENING;
+    } else if (emotionalDepth >= 60 && trustLevel >= 70) {
+      snapshot.phase = RelationshipPhase.RESILIENCE;
+    } else {
+      snapshot.phase = RelationshipPhase.STABILIZATION;
     }
-
-    if (newValue > previousValue) upCount++;
-    if (newValue < previousValue) downCount++;
-
-    if (upCount > downCount) return upCount > 2 ? 2 : 1;
-    if (downCount > upCount) return downCount > 2 ? -2 : -1;
-    return 0;
   }
 
-  private calculateOverallHealth(
-    dimensions: Record<RelationshipDimensionType, RelationshipDimension>
-  ): number {
-    const values = Object.values(dimensions).map((d) => d.value);
-    const average = values.reduce((sum, val) => sum + val, 0) / values.length;
-    return Math.round(average);
-  }
-
-  private calculateTrajectory(
-    dimensions: Record<RelationshipDimensionType, RelationshipDimension>
-  ): number {
-    const trends = Object.values(dimensions).map((d) => d.trend);
-    const averageTrend = trends.reduce((sum, trend) => sum + trend, 0) / trends.length;
-
-    if (averageTrend > 0.5) return 2;
-    if (averageTrend > 0) return 1;
-    if (averageTrend < -0.5) return -2;
-    if (averageTrend < 0) return -1;
-    return 0;
-  }
-
-  private getStrengths(dimensions: Record<RelationshipDimensionType, RelationshipDimension>): RelationshipDimensionType[] {
-    const sorted = Object.entries(dimensions)
-      .sort((a, b) => b[1].value - a[1].value)
-      .slice(0, 3)
-      .map(([type]) => type as RelationshipDimensionType);
-
-    return sorted;
-  }
-
-  private getVulnerabilities(
-    dimensions: Record<RelationshipDimensionType, RelationshipDimension>
-  ): RelationshipDimensionType[] {
-    const sorted = Object.entries(dimensions)
-      .sort((a, b) => a[1].value - b[1].value)
-      .slice(0, 3)
-      .map(([type]) => type as RelationshipDimensionType);
-
-    return sorted;
-  }
 }

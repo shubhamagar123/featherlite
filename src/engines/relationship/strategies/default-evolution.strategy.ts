@@ -74,7 +74,7 @@ export class DefaultEvolutionStrategy implements IRelationshipEvolutionStrategy 
         GrowthStrategyType.CONVERSATION_QUALITY,
         6,
         'Increase conversation quality for deeper connection',
-        [RelationshipDimensionType.EMOTIONAL_DEPTH, RelationshipDimensionType.OPENNESS],
+        [RelationshipDimensionType.EMOTIONAL_DEPTH, RelationshipDimensionType.COMMUNICATION_STYLE],
         10
       );
     });
