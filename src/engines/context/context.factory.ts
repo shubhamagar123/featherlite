@@ -11,6 +11,7 @@ import { getDatabaseServices, ServiceContainer } from '@services/factory';
 import { getWorldEngine, type Clock, type IWorldEngine } from '@engines/world';
 import { getCompanionEngine, type ICompanionEngine } from '@engines/companion';
 import { getRelationshipEngine, type IRelationshipEngine } from '@engines/relationship';
+import { getMemoryEngine, type IMemoryEngine } from '@engines/memory';
 
 import { ContextBuilder } from './builder/context.builder';
 import { ContextEngine } from './context.engine';
@@ -29,6 +30,7 @@ export interface ContextEngineDeps {
   worldEngine?: IWorldEngine;
   companionEngine?: ICompanionEngine;
   relationshipEngine?: IRelationshipEngine;
+  memoryEngine?: IMemoryEngine;
   clock?: Clock;
 }
 
@@ -42,21 +44,22 @@ export function buildProviderSet(
   services: ServiceContainer,
   worldEngine: IWorldEngine,
   companionEngine: ICompanionEngine,
-  relationshipEngine: IRelationshipEngine
+  relationshipEngine: IRelationshipEngine,
+  memoryEngine: IMemoryEngine
 ): ContextProviderSet {
   return {
     user: new UserContextProvider(services.userService),
     companion: new CompanionContextProvider(companionEngine),
     world: new WorldContextProvider(worldEngine),
     relationship: new RelationshipContextProvider(relationshipEngine),
-    memory: new MemoryContextProvider(services.memoryService),
+    memory: new MemoryContextProvider(memoryEngine),
     moments: new MomentsContextProvider(services.momentService),
   };
 }
 
 /**
  * Build (or return the cached) Context Engine, wired to the World Engine, the
- * Companion Engine, the Relationship Engine, and the service layer.
+ * Companion Engine, the Relationship Engine, the Memory Engine, and services.
  *
  * @param deps - Optional overrides (mainly for tests).
  */
@@ -69,8 +72,15 @@ export function getContextEngine(deps: ContextEngineDeps = {}): IContextEngine {
   const worldEngine = deps.worldEngine ?? getWorldEngine().engine;
   const companionEngine = deps.companionEngine ?? getCompanionEngine();
   const relationshipEngine = deps.relationshipEngine ?? getRelationshipEngine();
+  const memoryEngine = deps.memoryEngine ?? getMemoryEngine();
 
-  const providers = buildProviderSet(services, worldEngine, companionEngine, relationshipEngine);
+  const providers = buildProviderSet(
+    services,
+    worldEngine,
+    companionEngine,
+    relationshipEngine,
+    memoryEngine
+  );
   const builder = new ContextBuilder(providers, deps.clock);
   const engine = new ContextEngine(builder);
 
@@ -88,6 +98,11 @@ export function resetContextEngine(): void {
 
 function hasOverrides(deps: ContextEngineDeps): boolean {
   return Boolean(
-    deps.services || deps.worldEngine || deps.companionEngine || deps.relationshipEngine || deps.clock
+    deps.services ||
+      deps.worldEngine ||
+      deps.companionEngine ||
+      deps.relationshipEngine ||
+      deps.memoryEngine ||
+      deps.clock
   );
 }

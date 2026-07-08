@@ -7,6 +7,7 @@ import type { IUserService } from '@services/user/user.service.interface';
 import type { IRelationshipService } from '@services/relationship/relationship.service.interface';
 import type { IRelationshipEngine, RelationshipSnapshotDTO } from '@engines/relationship';
 import { RelationshipLevel, RelationshipStatus } from '@engines/relationship';
+import type { IMemoryEngine, CriticalMemoriesSliceDTO } from '@engines/memory';
 import type { IMemoryService } from '@services/memory/memory.service.interface';
 import type { IMomentService } from '@services/moment/moment.service.interface';
 import type { UserDTO } from '@services/dtos/user.dto';
@@ -236,4 +237,31 @@ export function mockRelationshipEngine(
       .fn()
       .mockResolvedValue(result ?? Result.success(makeRelationshipSnapshot())),
   } as unknown as IRelationshipEngine;
+}
+
+export function makeCriticalMemoriesSlice(
+  overrides: Partial<CriticalMemoriesSliceDTO> = {}
+): CriticalMemoriesSliceDTO {
+  return {
+    count: 1,
+    items: [
+      {
+        id: 'mem-1',
+        type: 'FACT',
+        importance: 'HIGH',
+        content: 'Enjoys morning coffee on the balcony.',
+        accessCount: 3,
+      },
+    ],
+    ...overrides,
+  };
+}
+
+export function mockMemoryEngine(result?: IResult<CriticalMemoriesSliceDTO>): IMemoryEngine {
+  return {
+    getCriticalMemories: jest
+      .fn()
+      .mockResolvedValue(result ?? Result.success(makeCriticalMemoriesSlice())),
+    getMemoryById: jest.fn().mockResolvedValue(Result.success(null)),
+  } as unknown as IMemoryEngine;
 }

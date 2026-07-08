@@ -11,11 +11,12 @@ import { ContextRequest } from '../dtos/conversation-context.dto';
 import {
   makeWorld,
   mockCompanionEngine,
-  mockMemoryService,
   mockMomentService,
   mockRelationshipEngine,
   mockUserService,
   mockWorldEngine,
+  mockMemoryEngine,
+  makeCriticalMemoriesSlice,
 } from './helpers';
 
 const REQUEST: ContextRequest = { userId: 'user-1', companionId: 'companion-1' };
@@ -102,24 +103,29 @@ describe('RelationshipContextProvider', () => {
 });
 
 describe('MemoryContextProvider', () => {
-  it('maps critical memories', async () => {
-    const provider = new MemoryContextProvider(mockMemoryService());
+  it('maps critical memories from the Memory Engine', async () => {
+    const provider = new MemoryContextProvider(mockMemoryEngine());
     const result = await provider.provide(REQUEST);
     expect(result.value).toMatchObject({ available: true, count: 1 });
     expect(result.value!.items[0]).toMatchObject({ importance: 'HIGH', type: 'FACT' });
   });
 
   it('reports a known-empty slice when there are no memories', async () => {
-    const provider = new MemoryContextProvider(mockMemoryService(Result.success([])));
+    const provider = new MemoryContextProvider(
+      mockMemoryEngine(Result.success(makeCriticalMemoriesSlice({ count: 0, items: [] })))
+    );
     const result = await provider.provide(REQUEST);
     expect(result.value).toEqual({ available: true, count: 0, items: [] });
   });
 
   it('respects the memory limit', async () => {
-    const service = mockMemoryService();
-    const provider = new MemoryContextProvider(service);
+    const engine = mockMemoryEngine();
+    const provider = new MemoryContextProvider(engine);
     await provider.provide({ ...REQUEST, limits: { memories: 3 } });
-    expect(service.getCriticalMemories).toHaveBeenCalledWith('companion-1', 3);
+    expect(engine.getCriticalMemories).toHaveBeenCalledWith({
+      companionId: 'companion-1',
+      limit: 3,
+    });
   });
 });
 

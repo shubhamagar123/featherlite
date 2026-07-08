@@ -36,7 +36,7 @@ Providers depend on engine interfaces (`IWorldEngine`, `ICompanionEngine`,
 | `CompanionContextProvider`      | `ICompanionEngine`           |    ✔     | failure → build aborts |
 | `WorldContextProvider`          | `IWorldEngine`               |    ✔     | failure → build aborts |
 | `RelationshipContextProvider`   | `IRelationshipEngine`        |          | not-found → empty slice |
-| `MemoryContextProvider`         | `IMemoryService`             |          | error → degrade |
+| `MemoryContextProvider`         | `IMemoryEngine`              |          | error → degrade |
 | `MomentsContextProvider`        | `IMomentService`             |          | error → degrade |
 
 **Degradation policy:** a *required* provider failing aborts the whole build; an
@@ -69,7 +69,7 @@ flowchart TD
     CP --> CS["ICompanionEngine"]
     WP --> WS["IWorldEngine"]
     RP --> RS["IRelationshipEngine"]
-    MP --> MS["IMemoryService"]
+    MP --> ME["IMemoryEngine"]
     OP --> OS["IMomentService"]
 
     UP --> ASM["Assemble slices + apply<br/>required/optional policy"]
@@ -98,6 +98,8 @@ flowchart TD
     CVE -. FORBIDDEN .-> WE["World Engine"]
     CVE -. FORBIDDEN .-> CE["Companion Engine"]
     CVE -. FORBIDDEN .-> RE["Relationship Engine"]
+    CVE -. FORBIDDEN .-> MEE["Memory Extraction Engine"]
+    CVE -. FORBIDDEN .-> ME["Memory Engine"]
     CVE -. FORBIDDEN .-> SVC["Services"]
 
     CTX --> UP["User Provider"]
@@ -110,21 +112,29 @@ flowchart TD
     WP --> WE
     CP --> CE
     RP --> RE
+    MP --> ME
     UP --> SVC
-    MP --> SVC
     OP --> SVC
     CE --> WE
     RE --> SVC
+    ME --> SVC
+    MEE --> SVC
+
+    CVE -.->|future: extract via| MEE
+    MEE -.->|future: persist via| ME
 
     linkStyle 1 stroke:#c0392b,stroke-width:2px
     linkStyle 2 stroke:#c0392b,stroke-width:2px
     linkStyle 3 stroke:#c0392b,stroke-width:2px
     linkStyle 4 stroke:#c0392b,stroke-width:2px
+    linkStyle 5 stroke:#c0392b,stroke-width:2px
+    linkStyle 6 stroke:#c0392b,stroke-width:2px
 ```
 
-The red, crossed edges (`Conversation Engine -> World/Companion/Relationship/Services`)
+The red, crossed edges (`Conversation Engine -> World/Companion/Relationship/Memory/Services`)
 are what this refactor **eliminates**. Everything now flows through the Context
-Engine.
+Engine. Memory flow (future): Conversation Engine extracts via Memory Extraction Engine,
+then persists via Memory Engine.
 
 ---
 
@@ -189,9 +199,9 @@ if (result.isSuccess) {
 ```
 
 For tests, inject mocked sources / a `FixedClock` via
-`getContextEngine({ services, worldEngine, companionEngine, relationshipEngine, clock })`,
+`getContextEngine({ services, worldEngine, companionEngine, relationshipEngine, memoryEngine, clock })`,
 or build a provider set directly with
-`buildProviderSet(services, worldEngine, companionEngine, relationshipEngine)`.
+`buildProviderSet(services, worldEngine, companionEngine, relationshipEngine, memoryEngine)`.
 
 ---
 

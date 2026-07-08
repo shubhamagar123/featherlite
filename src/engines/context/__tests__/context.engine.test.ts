@@ -8,25 +8,26 @@ import { ContextRequest } from '../dtos/conversation-context.dto';
 import {
   makeWorld,
   mockCompanionEngine,
-  mockMemoryService,
   mockMomentService,
   mockRelationshipEngine,
   mockUserService,
   mockWorldEngine,
+  mockMemoryEngine,
   TEST_DATE,
 } from './helpers';
 import type { ServiceContainer } from '@services/factory';
 import type { IRelationshipEngine } from '@engines/relationship';
+import type { IMemoryEngine } from '@engines/memory';
 
 interface EngineOverrides {
   serviceOverrides?: Partial<ServiceContainer>;
   relationshipEngine?: IRelationshipEngine;
+  memoryEngine?: IMemoryEngine;
 }
 
 function buildEngine(overrides: EngineOverrides = {}) {
   const services = {
     userService: mockUserService(),
-    memoryService: mockMemoryService(),
     momentService: mockMomentService(),
     ...overrides.serviceOverrides,
   } as unknown as ServiceContainer;
@@ -34,8 +35,15 @@ function buildEngine(overrides: EngineOverrides = {}) {
   const worldEngine = mockWorldEngine();
   const companionEngine = mockCompanionEngine();
   const relEngine = overrides.relationshipEngine ?? mockRelationshipEngine();
+  const memEngine = overrides.memoryEngine ?? mockMemoryEngine();
 
-  const providers = buildProviderSet(services, worldEngine, companionEngine, relEngine);
+  const providers = buildProviderSet(
+    services,
+    worldEngine,
+    companionEngine,
+    relEngine,
+    memEngine
+  );
   const builder = new ContextBuilder(providers, new FixedClock(TEST_DATE));
   return { engine: new ContextEngine(builder), worldEngine, companionEngine };
 }
