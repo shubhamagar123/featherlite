@@ -1,296 +1,437 @@
 # Featherlight Backend
 
-Production-grade AI companion platform backend built with Node.js, Express, PostgreSQL, and TypeScript.
+Production-grade AI companion platform backend built with Node.js, TypeScript,
+PostgreSQL, and Prisma. Uses **Feature-Driven + Clean Architecture** with
+deterministic business engines and strict layering.
 
-## Tech Stack
+**Status**: Core layers complete (Infrastructure, Services, Engines). API layer
+and AI integration are future work.
 
-- **Language:** Node.js (LTS) with TypeScript
-- **Framework:** Express.js
-- **Database:** PostgreSQL with Prisma ORM
-- **Caching:** Redis
-- **Authentication:** Firebase
-- **Storage:** AWS S3
-- **Realtime:** Socket.io
-- **Validation:** Zod
-- **Logging:** Pino
-- **Testing:** Jest
+---
 
-## Prerequisites
+## Architecture Overview
 
-- Node.js >= 20.0.0
-- npm >= 10.0.0
-- Docker & Docker Compose (for containerized development)
-- PostgreSQL 16+ (or via Docker)
-- Redis 7+ (or via Docker)
+Featherlight is organized into **6 architectural layers** and **6 core engines**:
+
+### Layers
+1. **Core** — Domain types, `Result<T>`, exceptions
+2. **Infrastructure** — Database (Prisma, 9 repositories), config, middleware
+3. **Services** — Business logic (9 services), DTOs, mappers, validation
+4. **Engines** — Deterministic business engines (World, Companion, Relationship, Memory)
+5. **Interaction** — HTTP layer (future: Express controllers/routes)
+6. **AI** — LLM integration (future)
+7. **Presentation** — Response serialization (future)
+
+### Engines
+- **World Engine** — Deterministic world generation (70-20-10 rule, seeded PRNG)
+- **Companion Engine** — Life-state resolution (state machine, mood/expression/gesture)
+- **Relationship Engine** — User-companion relationship snapshots
+- **Memory Engine** — Memory retrieval and ranking
+- **Memory Extraction Engine** — Entity extraction, importance detection, categorization
+- **Context Engine** — Aggregation boundary (6 concurrent providers, graceful degradation)
+
+**See [ARCHITECTURE.md](./ARCHITECTURE.md) for complete dependency graphs, folder tree, and design principles.**
+
+---
 
 ## Quick Start
 
-### 1. Clone Repository
+### 1. Clone & Install
 
 ```bash
 git clone <repository-url>
-cd featherlight-backend
-```
-
-### 2. Install Dependencies
-
-```bash
+cd featherlite
 npm install
 ```
 
-### 3. Configure Environment
-
-Copy `.env.example` to `.env.local` and update values:
+### 2. Configure Environment
 
 ```bash
 cp .env.example .env.local
+# Edit .env.local with your settings
 ```
 
-Edit `.env.local` with your configuration:
-- Database credentials
-- Firebase credentials
-- AWS S3 credentials
-- API keys (OpenAI, etc.)
-
-### 4. Start Database & Cache (Docker)
+### 3. Database Setup
 
 ```bash
-# Start PostgreSQL and Redis only
-docker-compose up postgres redis
+# Start PostgreSQL (Docker)
+docker-compose up postgres
 
-# Or start all services including the app
-docker-compose --profile with-app up
-```
-
-### 5. Run Database Migrations
-
-```bash
+# Run migrations
 npx prisma migrate dev
-```
 
-### 6. Seed Database (Optional)
-
-```bash
+# (Optional) Seed database
 npm run db:seed
 ```
 
-### 7. Start Development Server
+### 4. Run Tests
 
 ```bash
-npm run dev
+# Run all tests (226 tests across 22 suites)
+npm run test
+
+# Watch mode
+npm run test:watch
+
+# Coverage
+npm run test:coverage
 ```
 
-Server will run on `http://localhost:3000`
+### 5. Type Check
+
+```bash
+npm run typecheck
+```
+
+---
+
+## Tech Stack
+
+| Component | Technology |
+|-----------|-----------|
+| **Language** | TypeScript 5.x |
+| **Runtime** | Node.js 20+ |
+| **Database** | PostgreSQL 16+ with Prisma ORM |
+| **Testing** | Jest with mocked dependencies |
+| **Logging** | Pino (structured) |
+| **Validation** | Custom validators (no external dependency) |
+| **Error Handling** | `Result<T>` monadic type |
+
+**Future**: Express (HTTP), OpenAI (LLM), Redis (caching)
+
+---
 
 ## Available Scripts
 
 ```bash
 # Development
-npm run dev                 # Start dev server with hot reload
-
-# Building
-npm run build              # Compile TypeScript to JavaScript
-npm run typecheck          # Type check without building
+npm run dev                 # Start dev server (future)
+npm run typecheck          # Type check
 
 # Testing
-npm run test               # Run tests
-npm run test:watch        # Run tests in watch mode
-npm run test:coverage     # Generate coverage report
+npm run test               # Run all tests
+npm run test:watch        # Watch mode
+npm run test:coverage     # Coverage report
 
 # Code Quality
-npm run lint              # Check code style
-npm run lint:fix          # Fix linting issues
-npm run format            # Format code with Prettier
-npm run format:check      # Check Prettier formatting
+npm run lint              # ESLint check
+npm run lint:fix          # Fix lint issues
+npm run format            # Prettier format
+npm run format:check      # Check formatting
 
 # Database
-npm run db:migrate        # Create/apply migrations
-npm run db:migrate:prod   # Apply migrations in production
-npm run db:seed           # Seed database with sample data
+npx prisma migrate dev --name "description"  # Create migration
+npx prisma migrate deploy                     # Apply migrations
+npm run db:studio         # Prisma Studio GUI
 npm run db:reset          # Reset database (dev only)
-npm run db:studio         # Open Prisma Studio GUI
-
-# Health Check
-npm run health-check      # Check API health
 ```
+
+---
 
 ## Project Structure
 
 ```
 src/
-├── config/               # Configuration files
-├── types/                # TypeScript types & interfaces
-├── middleware/           # Express middleware
-├── utils/                # Utility functions
-├── constants/            # App-wide constants
-├── modules/              # Feature modules (each with controller, service, repository)
-├── engines/              # AI systems (conversation, memory, relationship, etc.)
-├── services/             # Cross-cutting services
-├── events/               # Event-driven architecture
-└── index.ts              # Application entry point
+├── config/                    # Environment validation
+├── database/
+│   ├── repositories/          # 9 concrete repositories
+│   ├── prisma.ts              # Prisma client setup
+│   ├── repository.base.ts     # Base CRUD + soft delete
+│   ├── transaction.ts         # Transaction management
+│   └── README.md
+├── engines/
+│   ├── world/                 # World Engine (41 tests)
+│   ├── companion/             # Companion Engine (66 tests)
+│   ├── relationship/          # Relationship Engine
+│   ├── memory/                # Memory Engine
+│   ├── memory-extraction/     # Memory Extraction Engine
+│   ├── context/               # Context Engine (22 tests)
+│   ├── README.md
+│   └── index.ts (future)
+├── middleware/
+│   ├── errorHandler.ts        # Express error handling
+│   ├── requestContext.ts      # Request-scoped DI
+│   ├── requestLogger.ts       # Pino logging
+│   └── security.ts            # Security headers
+├── services/
+│   ├── base/                  # Base Service
+│   ├── companion/
+│   ├── conversation/
+│   ├── dtos/                  # All transfer objects
+│   ├── exceptions/            # 11 domain-specific exceptions
+│   ├── mappers/               # Entity → DTO mapping
+│   ├── memory/
+│   ├── message/
+│   ├── moment/
+│   ├── notification/
+│   ├── relationship/
+│   ├── types/                 # Result<T>, shared types
+│   ├── user/
+│   ├── factory.ts             # DI container
+│   ├── README.md
+│   └── index.ts
+├── utils/
+│   ├── error.ts               # Error utilities
+│   ├── logger.ts              # Pino setup
+│   └── response.ts            # Response formatting
+├── app.ts (future)            # Express app
+└── index.ts (future)          # Server entry point
 
 prisma/
-├── schema.prisma         # Database schema
-└── migrations/           # Database migrations
+├── schema.prisma              # Entity definitions
+└── migrations/                # Database migrations
 
 tests/
-├── setup.ts              # Test configuration
-├── fixtures/             # Test data
-├── mocks/                # Mock implementations
-└── helpers/              # Test utilities
+├── env.setup.ts               # Jest env vars
+└── (test files live alongside source)
 ```
 
-See `docs/ARCHITECTURE.md` for detailed architecture documentation.
+---
 
-## Development Workflow
+## Key Design Principles
 
-1. **Create a feature branch:** `git checkout -b feature/your-feature`
-2. **Make changes:** Edit code in `src/`
-3. **Run tests:** `npm run test:watch`
-4. **Check code quality:** `npm run lint` and `npm run format:check`
-5. **Commit:** `git commit -m "Description of changes"`
-6. **Push:** `git push origin feature/your-feature`
-7. **Create Pull Request** for code review
+### 1. Deterministic, No Random
+All engines use seeded PRNGs and business rules — **never** `Math.random()`.
+World state and companion state are completely reproducible.
 
-## Docker Deployment
+### 2. Strict Layering
+- **API** ↔ **Engines** ↔ **Services** ↔ **Repositories** ↔ **Database**
+- API sees only Context Engine.
+- Engines orchestrate services; services map entities to DTOs.
+- Never cross layers (no repository calls from middleware, etc.).
 
-### Development Setup
-
-```bash
-# Start all services with development settings
-docker-compose up
-```
-
-### Production Build
-
-```bash
-# Build production image
-docker build -t featherlight-backend:latest .
-
-# Run production container
-docker run -p 3000:3000 \
-  -e NODE_ENV=production \
-  -e DATABASE_URL=postgresql://... \
-  -e REDIS_URL=redis://... \
-  featherlight-backend:latest
-```
-
-## Database Management
-
-### Create Migration
-
-```bash
-npx prisma migrate dev --name "description"
-```
-
-### View Database GUI
-
-```bash
-npm run db:studio
-```
-
-### Reset Database (Development Only)
-
-```bash
-npm run db:reset
-```
-
-## Logging
-
-Application uses Pino for structured logging:
+### 3. Explicit Error Handling
+`Result<T>` type: failures are data, not exceptions.
 
 ```typescript
-import { logger } from '@utils/logger';
+// Instead of:
+const user = await userService.getUserById(id); // throws on failure
 
-logger.info('Message', { context: 'data' });
-logger.error('Error', { error: err });
+// Do:
+const result = await userService.getUserById(id); // returns Result<UserDTO>
+if (result.isSuccess) {
+  const user = result.value;
+} else {
+  console.error(result.error);
+}
 ```
 
-Adjust log level with `LOG_LEVEL` environment variable:
-- `debug` - Development
-- `info` - Production
-- `warn` - Only warnings
-- `error` - Only errors
+### 4. Provider Pattern
+Context Engine uses 6 concurrent providers (one per source), each with:
+- Independent failure handling
+- Graceful degradation (optional providers)
+- Health reporting via `meta.degraded[]`
+
+### 5. Dependency Injection
+All dependencies are constructor-injected. Enables:
+- Independent unit testing (mock services)
+- Swapping implementations
+- Clear contracts (interfaces)
+
+### 6. No Bleeding Abstractions
+- DTOs are separate from entities
+- Services never expose repositories
+- Each layer has its own types
+
+---
 
 ## Testing
 
+**226 tests across 22 suites, all passing.**
+
+| Suite | Tests | Status |
+|-------|-------|--------|
+| World Engine | 41 | ✅ PASS |
+| Companion Engine | 66 | ✅ PASS |
+| Companion State Machine | 15 | ✅ PASS |
+| Context Engine | 22 | ✅ PASS |
+| Database/Repositories | 82 | ✅ PASS |
+
+**Test pattern**: Unit tests with mocked dependencies. Integration tests with
+real providers over mocked services.
+
 ```bash
-# Run all tests
+# Run tests
 npm run test
 
-# Watch mode
+# Watch mode (re-run on file change)
 npm run test:watch
 
 # Coverage report
 npm run test:coverage
 ```
 
-Tests are located alongside source code: `src/modules/[feature]/__tests__/`
+---
+
+## Database
+
+### Migrations
+
+```bash
+# Create a new migration
+npx prisma migrate dev --name "add_user_preferences"
+
+# Apply migrations in production
+npx prisma migrate deploy
+
+# Reset database (dev only)
+npm run db:reset
+```
+
+### Schema
+
+Entities:
+- User, Companion, Relationship
+- Conversation, Message
+- Memory, Moment
+- Notification, World
+
+Features:
+- **Soft delete** — All entities support `deletedAt` soft delete
+- **Automatic timestamps** — `createdAt`, `updatedAt` on all entities
+- **Strategic indexes** — On foreign keys, unique constraints, common queries
+
+**See `prisma/schema.prisma` for full schema.**
+
+---
 
 ## Environment Variables
 
-See `.env.example` for complete list. Critical variables:
-
-- `DATABASE_URL` - PostgreSQL connection string
-- `REDIS_URL` - Redis connection string
-- `FIREBASE_PROJECT_ID` - Firebase project ID
-- `AWS_REGION` - AWS region for S3
-- `JWT_SECRET` - Secret for JWT signing
-- `OPENAI_API_KEY` - OpenAI API key
-
-## Monitoring & Health
-
-Health check endpoint: `GET /health`
+Critical variables:
 
 ```bash
-npm run health-check
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/featherlight
+
+# Node
+NODE_ENV=development
+
+# Logging
+LOG_LEVEL=debug
+
+# JWT (future)
+JWT_SECRET=your-secret-key
+
+# Firebase (future)
+FIREBASE_PROJECT_ID=...
+FIREBASE_PRIVATE_KEY=...
+
+# AWS S3 (future)
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+
+# OpenAI (future)
+OPENAI_API_KEY=...
 ```
 
-## Contributing
+See `.env.example` for complete list.
 
-1. Read `docs/CONTRIBUTING.md`
-2. Follow code style (ESLint + Prettier)
-3. Write tests for new features
-4. Update documentation
+---
+
+## Development Workflow
+
+1. **Create feature branch**: `git checkout -b feature/your-feature`
+2. **Make changes** in `src/`
+3. **Type check**: `npm run typecheck`
+4. **Run tests**: `npm run test:watch`
+5. **Lint & format**: `npm run lint:fix && npm run format`
+6. **Commit**: `git commit -m "feat: description"`
+7. **Push**: `git push origin feature/your-feature`
+8. **Create PR** for review
+
+---
+
+## Next Steps
+
+### Phase 1: Complete Engines
+- [ ] Implement Memory Extraction Engine (entity extraction, scoring)
+- [ ] Implement Memory Engine (bridge to Memory Service)
+- [ ] Build Conversation Engine (consume Context Engine)
+
+### Phase 2: HTTP Layer
+- [ ] Create Express controllers
+- [ ] Define API routes
+- [ ] Add authentication middleware
+
+### Phase 3: AI Integration
+- [ ] Integrate LLM provider (OpenAI)
+- [ ] Implement inference pipeline
+- [ ] Add caching layer
+
+### Phase 4: Deployment
+- [ ] Docker containerization
+- [ ] CI/CD pipeline
+- [ ] Production monitoring
+
+---
+
+## Documentation
+
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** — Complete architecture with Mermaid diagrams
+- **[src/engines/README.md](./src/engines/README.md)** — Engines layer overview
+- **[src/services/README.md](./src/services/README.md)** — Services layer (9 services)
+- **[src/database/README.md](./src/database/README.md)** — Database layer (repositories, schema)
+- **[src/engines/world/README.md](./src/engines/world/README.md)** — World Engine (deterministic, 70-20-10)
+- **[src/engines/companion/README.md](./src/engines/companion/README.md)** — Companion Engine (state machine)
+- **[src/engines/context/README.md](./src/engines/context/README.md)** — Context Engine (aggregation)
+
+---
 
 ## Troubleshooting
 
-### Port Already in Use
+### Type Errors
 
 ```bash
-# Find process using port 3000
-lsof -i :3000
-
-# Kill the process
-kill -9 <PID>
+npm run typecheck
 ```
 
-### Database Connection Error
+Fix TypeScript errors before testing/committing.
+
+### Test Failures
 
 ```bash
-# Verify PostgreSQL is running
-docker-compose ps
-
-# Check connection string in .env.local
-# Format: postgresql://user:password@host:port/database
+npm run test -- --verbose
 ```
 
-### Redis Connection Error
+Check test output for exact failure. Mock data in `src/**/__tests__/helpers.ts`.
+
+### Database Issues
 
 ```bash
-# Verify Redis is running
-docker-compose ps
+# Check connection
+npx prisma db execute --stdin < <(echo "SELECT 1")
 
-# Test connection
-redis-cli ping
+# Reset database (dev only)
+npm run db:reset
+
+# Open Prisma Studio
+npm run db:studio
 ```
+
+### Environment Variables
+
+```bash
+# Verify env vars are set
+node -e "console.log(process.env.DATABASE_URL)"
+
+# Check .env.local exists
+cat .env.local
+```
+
+---
 
 ## Support
 
-- Documentation: See `docs/` directory
-- Issues: Create GitHub issue with detailed description
-- Questions: Check existing documentation first
+- **Issues**: Create GitHub issue with:
+  - TypeScript error output (if applicable)
+  - Test failure details
+  - Environment (Node version, OS)
+- **Docs**: Check ARCHITECTURE.md and README files in each layer
+- **Tests**: Look at test patterns in `src/**/__tests__/`
+
+---
 
 ## License
 
-Proprietary - Featherlight Team
+Proprietary — Featherlight Team
