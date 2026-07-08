@@ -55,8 +55,8 @@ export interface CompiledRule {
   isOptional: boolean;
 }
 
-/** Metrics about the prompt (for monitoring, A/B testing). */
-export interface PromptMetrics {
+/** Analytics about the prompt (for monitoring, A/B testing). */
+export interface PromptAnalytics {
   templateId: string;
   strategy: PromptStrategy;
   originalTokens: number;
@@ -76,8 +76,8 @@ export interface ValidationResult {
   rulesViolated: string[];
 }
 
-/** Final output of the Prompt Engine. */
-export interface PromptPackage {
+/** Final output of the Prompt Orchestrator. */
+export interface PromptPayload {
   id: string;
   requestId: string;
   type: PromptType;
@@ -97,7 +97,7 @@ export interface PromptPackage {
 
   // Quality assurance
   validation: ValidationResult;
-  metrics: PromptMetrics;
+  analytics: PromptAnalytics;
 
   // Caching
   cacheKey?: string;
@@ -142,21 +142,11 @@ export interface CompressionStatistics {
 }
 
 /** Version tracking for A/B testing. */
-export interface PromptVersion {
+export interface PromptTemplateVersion {
   templateId: string;
   version: string;
   variantId: string;
   description: string;
   releasedAt: Date;
   deprecated: boolean;
-}
-
-/** Prompt cache entry. */
-export interface CacheEntry {
-  key: string;
-  prompt: PromptPackage;
-  storedAt: Date;
-  expiresAt: Date;
-  hits: number;
-  metadata: Record<string, unknown>;
 }

@@ -1,16 +1,16 @@
 import { IResult } from '@services/types/result.type';
-import { PromptPackage, CacheEntry } from '../dtos/prompt.dtos';
+import { PromptPayload } from '../dtos/prompt.dtos';
 
-export interface IPromptCache {
+export interface IPromptCacheService {
   /**
    * Retrieve cached prompt if exists and not expired.
    */
-  get(key: string): Promise<IResult<PromptPackage | null>>;
+  get(key: string): Promise<IResult<PromptPayload | null>>;
 
   /**
    * Store prompt in cache.
    */
-  set(key: string, prompt: PromptPackage, ttlSeconds: number): Promise<IResult<void>>;
+  set(key: string, prompt: PromptPayload, ttlSeconds: number): Promise<IResult<void>>;
 
   /**
    * Clear cache entry.

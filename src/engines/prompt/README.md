@@ -1,17 +1,17 @@
-# Prompt Engine
+# Prompt Orchestrator
 
-The **Prompt Engine** is responsible for constructing production-ready prompts
-for any LLM provider. It is **completely independent** from OpenAI, Claude,
-Gemini, or any other AI model.
+The **Prompt Orchestrator** is responsible for orchestrating the complete prompt
+construction pipeline for any LLM provider. It is **completely independent** from
+OpenAI, Claude, Gemini, or any other AI model.
 
-Its only responsibility is to **build prompts**, never to **call LLMs**.
+Its only responsibility is to **orchestrate prompt construction**, never to **call LLMs**.
 
 ---
 
 ## Core Responsibility
 
-> The Prompt Engine receives a `ConversationContextDTO` and produces a
-> `PromptPackage` containing system, developer, and user prompts. It never
+> The Prompt Orchestrator receives a `ConversationContextDTO` and produces a
+> `PromptPayload` containing system, developer, and user prompts. It never
 > reaches to the database, never calls services, and never touches any LLM API.
 
 ---
@@ -53,93 +53,93 @@ Its only responsibility is to **build prompts**, never to **call LLMs**.
 
 ---
 
-## Diagram 1 — Prompt Engine in the system
+## Diagram 1 — Prompt Orchestrator in the system
 
 ```mermaid
 flowchart TD
     CONV["Conversation Engine<br/>(future)"]
     CTX["Context Engine"]
-    PROMPT["🔤 Prompt Engine"]
-    LLM["LLM Provider<br/>(future)<br/>OpenAI, Claude, etc."]
+    PROMPT["🔤 Prompt Orchestrator"]
+    LLM["LLM Gateway<br/>(future)<br/>OpenAI, Claude, Gemini"]
 
     CTX -->|"ConversationContextDTO"| PROMPT
-    PROMPT -->|"PromptPackage"| CONV
-    CONV -->|"build prompt via"| PROMPT
+    PROMPT -->|"PromptPayload"| CONV
+    CONV -->|"orchestrate prompt via"| PROMPT
     CONV -->|"send prompt to"| LLM
 
     PROMPT -. "NEVER calls" .-> LLM
     PROMPT -. "NEVER accesses" .-> DB["Database"]
     PROMPT -. "NEVER calls" .-> SVC["Services"]
 
-    classDef engine fill:#4a90e2,stroke:#2c5aa0,color:#fff
+    classDef orchestrator fill:#4a90e2,stroke:#2c5aa0,color:#fff
     classDef forbidden fill:#c0392b,stroke:#8b0000,color:#fff
-    class PROMPT engine
+    class PROMPT orchestrator
     class LLM,DB,SVC forbidden
 ```
 
 ---
 
-## Diagram 2 — Prompt building pipeline
+## Diagram 2 — Prompt orchestration pipeline
 
 ```mermaid
 sequenceDiagram
     participant App as Conversation Engine
-    participant Engine as PromptEngine
-    participant Builder as PromptBuilder
+    participant Orchestrator as PromptOrchestrator
+    participant Composer as PromptComposer
     participant Templates as Template Loader
     participant Rules as Rule Engine
-    participant Validator as Validator
+    participant Validator as ValidationService
     participant Compressor as Compressor
-    participant Cache as Cache
+    participant Cache as CacheService
 
-    App->>Engine: buildPrompt(context)
-    Engine->>Cache: getCachedPrompt(key)
-    Cache-->>Engine: cached PromptPackage (if hit)
+    App->>Orchestrator: buildPrompt(context)
+    Orchestrator->>Cache: getCachedPrompt(key)
+    Cache-->>Orchestrator: cached PromptPayload (if hit)
     
     alt Cache Miss
-        Engine->>Builder: build(context)
+        Orchestrator->>Composer: compose(context)
         
-        Builder->>Templates: loadTemplate(type)
-        Templates-->>Builder: PromptTemplate
+        Composer->>Templates: loadTemplate(type)
+        Templates-->>Composer: PromptTemplate
         
-        Builder->>Builder: injectContext(template, context)
+        Composer->>Composer: injectContext(template, context)
         
-        Builder->>Rules: compileRules(context)
-        Rules-->>Builder: CompiledRule[]
+        Composer->>Rules: compileRules(context)
+        Rules-->>Composer: CompiledRule[]
         
-        Builder->>Builder: insertRules(segments)
+        Composer->>Composer: insertRules(segments)
         
-        Builder->>Validator: validate(prompt)
-        Validator-->>Builder: ValidationResult
+        Composer->>Validator: validate(payload)
+        Validator-->>Composer: ValidationResult
         
         alt Needs Compression
-            Builder->>Compressor: compress(prompt, maxTokens)
-            Compressor-->>Builder: compressed PromptPackage
+            Composer->>Compressor: compress(payload, maxTokens)
+            Compressor-->>Composer: compressed PromptPayload
         end
         
-        Builder->>Cache: set(key, prompt)
-        Builder-->>Engine: PromptPackage
+        Composer->>Cache: set(key, payload)
+        Composer-->>Orchestrator: PromptPayload
     end
     
-    Engine-->>App: PromptPackage
+    Orchestrator-->>App: PromptPayload
 ```
 
 ---
 
-## Diagram 3 — Prompt Engine architecture
+## Diagram 3 — Prompt Orchestrator architecture
 
 ```mermaid
 flowchart TD
     CONTEXT["ConversationContextDTO<br/>(from Context Engine)"]
     
-    CONTEXT -->|"PromptBuildContext"| BUILDER["PromptBuilder"]
+    CONTEXT -->|"PromptBuildContext"| COMPOSER["PromptComposer"]
     
-    BUILDER --> LOADER["Template Loader"]
-    BUILDER --> INJECTOR["Context Injector"]
-    BUILDER --> RULES["Rule Engine"]
-    BUILDER --> VALIDATOR["Validator"]
-    BUILDER --> COMPRESSOR["Compressor"]
-    BUILDER --> CACHE["Cache"]
+    COMPOSER --> LOADER["Template Loader"]
+    COMPOSER --> INJECTOR["Context Injector"]
+    COMPOSER --> RULES["Rule Engine"]
+    COMPOSER --> VALIDATOR["ValidationService"]
+    COMPOSER --> COMPRESSOR["Compressor"]
+    COMPOSER --> CACHE["CacheService"]
     
     LOADER --> TEMPLATES["Template Store<br/>(in-memory)"]
     TEMPLATES --> POOL["Template Pool<br/>Conversation<br/>Memory Extract<br/>Relationship Update<br/>etc."]
@@ -163,26 +163,26 @@ flowchart TD
     
     CACHE --> INMEM["In-Memory Cache<br/>TTL-based expiry"]
     
-    BUILDER -->|"PromptPackage"| OUT["Output"]
+    COMPOSER -->|"PromptPayload"| OUT["Output"]
 ```
 
 ---
 
 ## Interfaces
 
-### IPromptEngine
+### IPromptOrchestrator
 
 ```typescript
-interface IPromptEngine {
-  buildPrompt(context: PromptBuildContext): Promise<IResult<PromptPackage>>;
-  getCachedPrompt(cacheKey: string): Promise<IResult<PromptPackage | null>>;
-  getMetrics(templateId: string): Promise<IResult<PromptMetrics[]>>;
+interface IPromptOrchestrator {
+  buildPrompt(context: PromptBuildContext): Promise<IResult<PromptPayload>>;
+  getCachedPrompt(cacheKey: string): Promise<IResult<PromptPayload | null>>;
+  getAnalytics(templateId: string): Promise<IResult<PromptAnalytics[]>>;
 }
 ```
 
-### IPromptBuilder
+### IPromptComposer
 
-Orchestrates the entire prompt construction pipeline:
+Composes the entire prompt construction pipeline:
 1. Load template
 2. Inject context (world, companion, relationship, memory, moments, user)
 3. Apply rules (safety, personality, product, style)
@@ -190,7 +190,7 @@ Orchestrates the entire prompt construction pipeline:
 5. Compress if needed
 6. Cache the result
 
-### IPromptValidator
+### IPromptValidationService
 
 Validates:
 - All required context is present
@@ -206,7 +206,7 @@ Compresses using strategies:
 - **MODERATE**: Summarize non-critical sections
 - **AGGRESSIVE**: Prioritize by importance, truncate
 
-### IPromptCache
+### IPromptCacheService
 
 In-memory cache with TTL:
 - Get/set/invalidate
@@ -222,7 +222,7 @@ ConversationContextDTO
     ↓
 PromptBuildContext
     ↓
-PromptBuilder.build()
+PromptComposer.compose()
     ├─→ PromptTemplate (from loader)
     ├─→ Inject Context (user, companion, world, relationship, memory, moments)
     ├─→ Apply Rules (safety, personality, product, style)
@@ -230,16 +230,16 @@ PromptBuilder.build()
     ├─→ Compress (if token budget exceeded)
     └─→ Cache (store compiled result)
     ↓
-PromptPackage
+PromptPayload
     ├── systemPrompt: PromptSegment
     ├── developerPrompt?: PromptSegment
     ├── userPrompt: PromptSegment
     ├── rules: CompiledRule[]
     ├── validation: ValidationResult
-    ├── metrics: PromptMetrics
+    ├── analytics: PromptAnalytics
     └── cached: boolean
     ↓
-Ready to send to LLM provider
+Ready to send to LLM Gateway
 ```
 
 ---
@@ -288,45 +288,45 @@ Ready to send to LLM provider
 ```
 src/engines/prompt/
 ├── interfaces/
-│   ├── prompt-engine.interface.ts       # IPromptEngine
-│   ├── prompt-builder.interface.ts      # IPromptBuilder
-│   ├── prompt-strategy.interface.ts     # IPromptStrategy
-│   ├── prompt-validator.interface.ts    # IPromptValidator
-│   ├── prompt-compressor.interface.ts   # IPromptCompressor
-│   └── prompt-cache.interface.ts        # IPromptCache
+│   ├── prompt-orchestrator.interface.ts      # IPromptOrchestrator
+│   ├── prompt-composer.interface.ts          # IPromptComposer
+│   ├── prompt-assembly-strategy.interface.ts # IPromptAssemblyStrategy
+│   ├── prompt-validation-service.interface.ts# IPromptValidationService
+│   ├── prompt-compressor.interface.ts        # IPromptCompressor
+│   └── prompt-cache-service.interface.ts     # IPromptCacheService
 ├── dtos/
-│   └── prompt.dtos.ts                   # All DTOs
+│   └── prompt.dtos.ts                        # All DTOs
 ├── enums/
-│   └── prompt.enums.ts                  # All enums
+│   └── prompt.enums.ts                       # All enums
+├── composers/
+│   ├── prompt-composer.ts                    # Main composer
+│   ├── template-loader.ts                    # Template loading
+│   └── context-injector.ts                   # Context injection
 ├── templates/
-│   ├── conversation.template.ts         # Conversation prompt template
-│   ├── memory-extraction.template.ts    # Memory extraction template
-│   ├── relationship.template.ts         # Relationship update template
+│   ├── conversation.template.ts              # Conversation prompt template
+│   ├── memory-extraction.template.ts         # Memory extraction template
+│   ├── relationship.template.ts              # Relationship update template
 │   └── ...
 ├── rules/
-│   ├── safety.rules.ts                  # Safety rules definitions
-│   ├── personality.rules.ts             # Personality rules
-│   ├── product.rules.ts                 # Product rules
-│   ├── communication-style.rules.ts     # Communication style
-│   └── rule-engine.ts                   # Rule compilation & injection
+│   ├── safety.rules.ts                       # Safety rules definitions
+│   ├── personality.rules.ts                  # Personality rules
+│   ├── product.rules.ts                      # Product rules
+│   ├── communication-style.rules.ts          # Communication style
+│   └── rule-engine.ts                        # Rule compilation & injection
 ├── strategies/
-│   ├── standard.strategy.ts             # Standard strategy
-│   ├── detailed.strategy.ts             # Detailed strategy
-│   ├── concise.strategy.ts              # Concise strategy
+│   ├── standard.strategy.ts                  # Standard assembly strategy
+│   ├── detailed.strategy.ts                  # Detailed assembly strategy
+│   ├── concise.strategy.ts                   # Concise assembly strategy
 │   └── ...
-├── builders/
-│   ├── prompt.builder.ts                # Main builder
-│   ├── template-loader.ts               # Template loading
-│   └── context-injector.ts              # Context injection
 ├── compressor/
-│   └── prompt-compressor.ts             # Compression logic
+│   └── prompt-compressor.ts                  # Compression logic
 ├── validator/
-│   └── prompt-validator.ts              # Validation logic
+│   └── prompt-validation-service.ts          # Validation logic
 ├── cache/
-│   └── prompt-cache.ts                  # In-memory cache
-├── prompt.engine.ts                     # Main engine class
-├── prompt.factory.ts                    # DI factory
-├── index.ts                             # Barrel exports
+│   └── prompt-cache-service.ts               # In-memory cache
+├── prompt-orchestrator.ts                    # Main orchestrator class
+├── prompt-orchestrator.factory.ts            # DI factory
+├── index.ts                                  # Barrel exports
 └── README.md
 ```
 
@@ -335,13 +335,13 @@ src/engines/prompt/
 ## Usage Example
 
 ```typescript
-import { getPromptEngine } from '@engines/prompt';
-import { PromptType, PromptStrategy } from '@engines/prompt';
+import { getPromptOrchestrator } from '@engines/prompt';
+import { PromptType, PromptStrategy, CompressionLevel } from '@engines/prompt';
 
-const promptEngine = getPromptEngine();
+const promptOrchestrator = getPromptOrchestrator();
 
-// Build a prompt from conversation context
-const result = await promptEngine.buildPrompt({
+// Orchestrate prompt construction from conversation context
+const result = await promptOrchestrator.buildPrompt({
   conversationContext: contextDTO,
   promptType: PromptType.CONVERSATION,
   strategy: PromptStrategy.DETAILED,
@@ -350,23 +350,23 @@ const result = await promptEngine.buildPrompt({
 });
 
 if (result.isSuccess) {
-  const promptPackage = result.value;
+  const promptPayload = result.value;
   
-  // promptPackage contains:
+  // promptPayload contains:
   // - systemPrompt: PromptSegment (instructions)
   // - developerPrompt?: PromptSegment (optional implementation guidance)
   // - userPrompt: PromptSegment (user input + injected context)
   // - rules: CompiledRule[] (safety, personality, product rules)
   // - validation: ValidationResult (pass/fail + errors)
-  // - metrics: PromptMetrics (tracking for monitoring)
+  // - analytics: PromptAnalytics (tracking for monitoring)
   
-  // Now ready to send to LLM:
-  // const response = await openai.chat.completions.create({
+  // Now ready to send to LLM Gateway:
+  // const response = await llmGateway.send({
   //   messages: [
-  //     { role: 'system', content: promptPackage.systemPrompt.content },
-  //     { role: 'user', content: promptPackage.userPrompt.content },
+  //     { role: 'system', content: promptPayload.systemPrompt.content },
+  //     { role: 'user', content: promptPayload.userPrompt.content },
   //   ],
-  //   max_tokens: promptPackage.totalTokens,
+  //   max_tokens: promptPayload.totalTokens,
   // });
 }
 ```
@@ -376,9 +376,9 @@ if (result.isSuccess) {
 ## Design Principles
 
 ### 1. **LLM Provider Independence**
-The Prompt Engine produces prompt structure only. It never calls OpenAI, Claude,
-Gemini, or any other LLM. The caller (future Conversation Engine) is responsible
-for sending the prompt to the chosen provider.
+The Prompt Orchestrator orchestrates prompt construction only. It never calls
+OpenAI, Claude, Gemini, or any other LLM. The caller (future Conversation Engine)
+is responsible for sending the prompt to the chosen LLM Gateway.
 
 ### 2. **Context-Only Consumption**
 Receives only `ConversationContextDTO`. Never accesses repositories, services,
@@ -411,6 +411,6 @@ Enables A/B testing, monitoring, and optimization.
 1. **Implement template library** — Conversation, Memory Extraction, Relationship, etc.
 2. **Implement rule engine** — Compile and inject safety, personality, product rules
 3. **Implement compressor** — Multiple compression strategies
-4. **Implement validator** — Completeness, safety, compliance checks
-5. **Connect to Conversation Engine** — Receive context, send PromptPackage
-6. **Telemetry** — Track metrics for A/B testing and optimization
+4. **Implement validation service** — Completeness, safety, compliance checks
+5. **Connect to Conversation Engine** — Receive context, send PromptPayload
+6. **Telemetry** — Track analytics for A/B testing and optimization

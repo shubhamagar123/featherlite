@@ -1,30 +1,29 @@
 export {
-  getPromptEngine,
-  registerPromptEngine,
-  resetPromptEngine,
-} from './prompt.factory';
-export type { PromptEngineDeps } from './prompt.factory';
+  getPromptOrchestrator,
+  registerPromptOrchestrator,
+  resetPromptOrchestrator,
+} from './prompt-orchestrator.factory';
+export type { PromptOrchestratorDeps } from './prompt-orchestrator.factory';
 
-export type { IPromptEngine } from './interfaces/prompt-engine.interface';
-export type { IPromptBuilder } from './interfaces/prompt-builder.interface';
-export type { IPromptStrategy } from './interfaces/prompt-strategy.interface';
-export type { IPromptValidator } from './interfaces/prompt-validator.interface';
+export type { IPromptOrchestrator } from './interfaces/prompt-orchestrator.interface';
+export type { IPromptComposer } from './interfaces/prompt-composer.interface';
+export type { IPromptAssemblyStrategy } from './interfaces/prompt-assembly-strategy.interface';
+export type { IPromptValidationService } from './interfaces/prompt-validation-service.interface';
 export type { IPromptCompressor } from './interfaces/prompt-compressor.interface';
-export type { IPromptCache } from './interfaces/prompt-cache.interface';
+export type { IPromptCacheService } from './interfaces/prompt-cache-service.interface';
 
 export type {
-  PromptPackage,
+  PromptPayload,
   PromptSegment,
   PromptTemplate,
   PromptBuildContext,
   CompiledRule,
-  PromptMetrics,
+  PromptAnalytics,
   ValidationResult,
   ContextInjectionPoint,
   RuleDefinition,
   CompressionStatistics,
-  PromptVersion,
-  CacheEntry,
+  PromptTemplateVersion,
   TemplateVariable,
 } from './dtos/prompt.dtos';
 
