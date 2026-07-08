@@ -1,6 +1,5 @@
 import { IResult } from '@services/types/result.type';
 import { RelationshipSnapshot, EvolutionStrategy } from '../dtos/relationship.dtos';
-import { GrowthStrategyType } from '../enums/relationship.enums';
 
 export interface IRelationshipEvolutionStrategy {
   /**

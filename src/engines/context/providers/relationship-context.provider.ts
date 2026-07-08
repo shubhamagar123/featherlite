@@ -25,21 +25,21 @@ export class RelationshipContextProvider implements IContextProvider<Relationshi
   }
 
   async provide(request: ContextRequest): Promise<IResult<RelationshipContextSlice>> {
-    const result = await this.relationshipEngine.getRelationshipSnapshot({
-      userId: request.userId,
-      companionId: request.companionId,
-    });
+    const result = await this.relationshipEngine.getSnapshot(
+      request.userId,
+      request.companionId
+    );
 
     if (result.isSuccess && result.value) {
-      const rel = result.value;
+      const snapshot = result.value;
       return Result.success({
         available: true,
-        status: rel.status,
-        level: rel.level,
-        affectionScore: rel.affectionScore,
-        trustScore: rel.trustScore,
-        familiarityScore: rel.familiarityScore,
-        totalInteractions: rel.totalInteractions,
+        status: snapshot.status,
+        level: snapshot.phase,
+        affectionScore: snapshot.overallHealth,
+        trustScore: snapshot.dimensions.TRUST?.value ?? 0,
+        familiarityScore: snapshot.dimensions.FAMILIARITY?.value ?? 0,
+        totalInteractions: 0,
       });
     }
 

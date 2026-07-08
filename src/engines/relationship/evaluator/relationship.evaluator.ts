@@ -28,14 +28,12 @@ export class RelationshipEvaluator implements IRelationshipEvaluator {
     input: InteractionEvaluationInput
   ): Promise<IResult<InteractionEvaluationResult>> {
     return Result.tryAsync(async () => {
-      const rules = this.relationshipContext.getGrowthRules();
-
       const affectedDimensions = this.determineAffectedDimensions(
         input.eventType,
         input.quality
       );
 
-      const estimatedImpact: Record<RelationshipDimensionType, number> = {};
+      const estimatedImpact: Partial<Record<RelationshipDimensionType, number>> = {};
 
       for (const dimension of affectedDimensions) {
         const rule = this.relationshipContext.getGrowthRule(dimension);
@@ -58,7 +56,7 @@ export class RelationshipEvaluator implements IRelationshipEvaluator {
       return {
         quality: input.quality,
         affectedDimensions,
-        estimatedImpact,
+        estimatedImpact: estimatedImpact as Record<RelationshipDimensionType, number>,
         newEvent,
       };
     });

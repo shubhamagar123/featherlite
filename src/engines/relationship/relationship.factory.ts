@@ -8,7 +8,6 @@
 
 import { getDatabaseServices, ServiceContainer } from '@services/factory';
 import { IRelationshipService } from '@services/relationship/relationship.service.interface';
-import { getContextEngine, IContextEngine } from '@engines/context';
 
 import { RelationshipEngine } from './relationship.engine';
 import type { IRelationshipEngine } from './interfaces/relationship-engine.interface';
@@ -24,7 +23,6 @@ import { DefaultEvolutionStrategy } from './strategies/default-evolution.strateg
 /** Overridable dependencies for constructing the engine. */
 export interface RelationshipEngineDeps {
   relationshipService?: IRelationshipService;
-  contextEngine?: IContextEngine;
   relationshipContext?: IRelationshipContext;
   evaluator?: IRelationshipEvaluator;
   updater?: IRelationshipUpdater;
@@ -46,16 +44,13 @@ export function getRelationshipEngine(deps: RelationshipEngineDeps = {}): IRelat
 
   const services: ServiceContainer = getDatabaseServices();
   const relationshipService = deps.relationshipService ?? services.relationshipService;
-  const contextEngine = deps.contextEngine ?? getContextEngine();
   const relationshipContext = deps.relationshipContext ?? new RelationshipContext();
   const evaluator = deps.evaluator ?? new RelationshipEvaluator(relationshipContext);
   const updater = deps.updater ?? new RelationshipUpdater(relationshipContext);
-  const strategy = deps.strategy ?? new DefaultEvolutionStrategy(evaluator, updater);
+  const strategy = deps.strategy ?? new DefaultEvolutionStrategy(updater);
 
   const engine = new RelationshipEngine({
     relationshipService,
-    contextEngine,
-    relationshipContext,
     evaluator,
     updater,
     strategy,
@@ -76,7 +71,6 @@ export function resetRelationshipEngine(): void {
 function hasOverrides(deps: RelationshipEngineDeps): boolean {
   return Boolean(
     deps.relationshipService ||
-      deps.contextEngine ||
       deps.relationshipContext ||
       deps.evaluator ||
       deps.updater ||

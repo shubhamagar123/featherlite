@@ -11,10 +11,8 @@ import { IResult, Result } from '@services/types/result.type';
 import {
   RelationshipSnapshot,
   EvolutionStrategy,
-  RelationshipDimension,
 } from '../dtos/relationship.dtos';
 import { IRelationshipEvolutionStrategy } from '../interfaces/relationship-strategy.interface';
-import { IRelationshipEvaluator } from '../interfaces/relationship-evaluator.interface';
 import { IRelationshipUpdater } from '../interfaces/relationship-updater.interface';
 import {
   GrowthStrategyType,
@@ -24,10 +22,7 @@ import {
 } from '../enums/relationship.enums';
 
 export class DefaultEvolutionStrategy implements IRelationshipEvolutionStrategy {
-  constructor(
-    private evaluator: IRelationshipEvaluator,
-    private updater: IRelationshipUpdater
-  ) {}
+  constructor(private updater: IRelationshipUpdater) {}
 
   recommendStrategy(snapshot: RelationshipSnapshot): IResult<EvolutionStrategy> {
     return Result.try(() => {
