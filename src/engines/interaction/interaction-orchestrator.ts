@@ -238,32 +238,30 @@ export class InteractionOrchestrator implements IInteractionOrchestrator {
     switch (interaction.type) {
       case InteractionType.TEXT_CHAT:
         return this.conversationManager.processMessage(
-          interaction as any,
+          interaction,
           context
         );
       case InteractionType.VOICE_CALL:
-        await this.voiceManager.handleCallState(interaction as any);
+        await this.voiceManager.handleCallState(interaction);
         return Result.success('Voice call handled');
       case InteractionType.ACTIVITY:
-        await this.activityManager.startActivity(interaction as any, context);
+        await this.activityManager.startActivity(interaction, context);
         return Result.success('Activity started');
       case InteractionType.PRESENCE:
-        await this.presenceManager.updatePresence(interaction as any, context);
+        await this.presenceManager.updatePresence(interaction, context);
         return Result.success('Presence updated');
       case InteractionType.TYPING:
-        await this.typingManager.reportTyping(interaction as any);
+        await this.typingManager.reportTyping(interaction);
         return Result.success('Typing reported');
       case InteractionType.STREAMING:
-        await this.streamingManager.startStream(interaction as any, context);
+        await this.streamingManager.startStream(interaction, context);
         return Result.success('Stream started');
       case InteractionType.INTERRUPTION:
-        await this.interruptionManager.handleInterruption(interaction as any);
+        await this.interruptionManager.handleInterruption(interaction);
         return Result.success('Interruption handled');
       case InteractionType.SILENCE:
-        await this.silenceManager.recordSilence(interaction as any);
+        await this.silenceManager.recordSilence(interaction);
         return Result.success('Silence recorded');
-      default:
-        return Result.failure(new Error(`Unknown interaction type: ${(interaction as any).type}`));
     }
   }
 
