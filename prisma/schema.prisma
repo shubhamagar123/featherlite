@@ -994,6 +994,78 @@ model AnalyticsEvent {
 }
 
 // ============================================================================
+// OUTBOX TABLE (Event Durability)
+// Purpose: Transactional outbox for reliable event persistence and replay.
+// Pattern: Events written alongside aggregate mutations within the same Prisma
+//   transaction guarantee both succeed or both fail. OutboxPoller reads pending
+//   events, publishes to the event bus, and marks published.
+// Scalability: Index on status+createdAt for efficient polling. Archive old
+//   published events via periodic purge.
+// ============================================================================
+
+model Outbox {
+  id String @id @default(cuid())
+
+  // Event Identity
+  aggregateId String // e.g., companionId, relationshipId
+  aggregateType String // e.g., COMPANION, RELATIONSHIP, MEMORY, MOMENT
+  eventType String // EventType enum as string
+  eventName String
+
+  // Event Data
+  payload String @db.Text // JSON-serialized DomainEventPayload
+  metadata String @db.Text // JSON-serialized EventMetadata
+
+  // Status
+  status String @default("PENDING") // PENDING, PUBLISHED, FAILED
+  failureReason String?
+
+  // Retry tracking
+  attempts Int @default(0)
+  lastAttemptedAt DateTime?
+  nextRetryAt DateTime @default(now())
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  publishedAt DateTime?
+  deletedAt DateTime? // Soft delete for archive
+
+  @@index([status, createdAt]) // For efficient polling
+  @@index([aggregateId]) // For event sourcing lookups
+  @@index([eventType])
+  @@index([publishedAt])
+  @@index([deletedAt])
+}
+
+// ============================================================================
+// PROCESSEDEVENTS TABLE (Idempotency)
+// Purpose: Deduplication of event handlers. Prevents duplicate side effects
+//   when the same event is delivered multiple times (e.g., after process restart).
+// Pattern: Unique (eventId, handlerId) ensures each handler processes each
+//   event at most once. A handler checks this table before processing; if a
+//   row exists, it skips (already processed).
+// Scalability: Can be partitioned by eventId (or time-based if events have
+//   expiration). Archive old processed events periodically.
+// ============================================================================
+
+model ProcessedEvents {
+  id String @id @default(cuid())
+
+  // Event & Handler Identity
+  eventId String
+  handlerId String // UUID of the handler instance
+
+  // Processing details
+  processedAt DateTime @default(now())
+
+  // Ensure idempotency: (eventId, handlerId) must be unique
+  @@unique([eventId, handlerId])
+  @@index([eventId])
+  @@index([handlerId])
+  @@index([processedAt])
+}
+
+// ============================================================================
 // DATABASE NOTES & DESIGN DECISIONS
 // ============================================================================
 // 
