@@ -39,15 +39,26 @@ export class IdempotencyMiddleware implements IEventHandler {
   ): Promise<IResult<void>> {
     const eventId = envelope.metadata.eventId;
 
-    // Check if already processed
-    const isProcessed = await this.repository.isProcessed(eventId, this.handlerId);
+    try {
+      // Check if already processed
+      const isProcessed = await this.repository.isProcessed(eventId, this.handlerId);
 
-    if (isProcessed) {
-      this.logger.debug(
-        { eventId, handlerId: this.handlerId },
-        'Event already processed, skipping'
+      if (isProcessed) {
+        this.logger.debug(
+          { eventId, handlerId: this.handlerId },
+          'Event already processed, skipping'
+        );
+        return Result.success(undefined);
+      }
+    } catch (error) {
+      this.logger.warn(
+        {
+          eventId,
+          handlerId: this.handlerId,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        'Could not check processed events (database unavailable), proceeding with handler'
       );
-      return Result.success(undefined);
     }
 
     // Execute handler
@@ -62,13 +73,13 @@ export class IdempotencyMiddleware implements IEventHandler {
           'Event marked as processed'
         );
       } catch (error) {
-        this.logger.error(
+        this.logger.warn(
           {
             eventId,
             handlerId: this.handlerId,
             error: error instanceof Error ? error.message : String(error),
           },
-          'Failed to mark event as processed'
+          'Failed to mark event as processed (continuing anyway)'
         );
       }
     }

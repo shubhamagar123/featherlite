@@ -4,6 +4,9 @@ import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { getEnvironment } from '@config/environment';
+import { createLogger } from '@utils/logger';
+
+const logger = createLogger('OpenTelemetry');
 
 const env = getEnvironment();
 
@@ -28,17 +31,17 @@ export const sdk = new NodeSDK({
 export async function initializeTracing(): Promise<void> {
   try {
     await sdk.start();
-    console.log('✅ OpenTelemetry tracing initialized');
+    logger.info('OpenTelemetry tracing initialized');
   } catch (error) {
-    console.error('Failed to initialize OpenTelemetry:', error);
+    logger.error({ error }, 'Failed to initialize OpenTelemetry');
   }
 }
 
 export async function shutdownTracing(): Promise<void> {
   try {
     await sdk.shutdown();
-    console.log('✅ OpenTelemetry tracing shut down');
+    logger.info('OpenTelemetry tracing shut down');
   } catch (error) {
-    console.error('Failed to shutdown OpenTelemetry:', error);
+    logger.error({ error }, 'Failed to shutdown OpenTelemetry');
   }
 }
