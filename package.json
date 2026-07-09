@@ -34,12 +34,14 @@
     "firebase-admin": "^12.0.0",
     "pg": "^8.11.3",
     "@prisma/client": "^5.7.0",
+    "ioredis": "^5.3.2",
     "redis": "^4.6.12",
     "bullmq": "^5.7.0",
     "socket.io": "^4.7.2",
     "aws-sdk": "^2.1558.0",
     "uuid": "^9.0.1",
-    "lodash-es": "^4.17.21"
+    "lodash-es": "^4.17.21",
+    "lru-cache": "^10.1.0"
   },
   "devDependencies": {
     "typescript": "^5.3.3",

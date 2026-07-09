@@ -38,9 +38,7 @@ export class RedisDLQService {
         payload: entry.envelope.payload,
       });
 
-      await client.xAdd(this.streamKey, '*', {
-        data: serialized,
-      });
+      await client.xadd(this.streamKey, '*', 'data', serialized);
 
       this.logger.debug(
         {
@@ -66,13 +64,13 @@ export class RedisDLQService {
   async getAll(): Promise<DeadLetterEntry[]> {
     try {
       const client = redisProvider.getClient();
-      const entries = await client.xRange(this.streamKey, '-', '+');
+      const entries = await client.xrange(this.streamKey, '-', '+');
 
       return entries
         .reverse()
         .map((entry: any) => {
           try {
-            const data = JSON.parse(entry.message.data as string);
+            const data = JSON.parse(entry[1].data as string);
             return {
               envelope: {
                 metadata: {
@@ -92,7 +90,7 @@ export class RedisDLQService {
             } as DeadLetterEntry;
           } catch (parseError) {
             this.logger.warn(
-              { error: parseError, entry: entry.id },
+              { error: parseError, entry: entry[0] },
               'Failed to parse dead letter entry'
             );
             return null;
@@ -141,7 +139,7 @@ export class RedisDLQService {
   async count(): Promise<number> {
     try {
       const client = redisProvider.getClient();
-      const length = await client.xLen(this.streamKey);
+      const length = await client.xlen(this.streamKey);
       return length;
     } catch (error) {
       this.logger.error({ error }, 'Failed to count DLQ entries');
@@ -177,10 +175,10 @@ export class RedisDLQService {
       const client = redisProvider.getClient();
 
       for (const entry of oldEntries) {
-        const entries = await client.xRange(this.streamKey, '-', '+');
+        const entries = await client.xrange(this.streamKey, '-', '+');
         const toDelete = entries.find((e: any) => {
           try {
-            const data = JSON.parse(e.message.data as string);
+            const data = JSON.parse(e[1].data as string);
             return data.eventId === entry.envelope.metadata.eventId;
           } catch {
             return false;
@@ -188,7 +186,7 @@ export class RedisDLQService {
         });
 
         if (toDelete) {
-          await client.xDel(this.streamKey, toDelete.id);
+          await client.xdel(this.streamKey, toDelete[0]);
         }
       }
 
@@ -211,13 +209,10 @@ export class RedisDLQService {
   private async trimStream(): Promise<void> {
     try {
       const client = redisProvider.getClient();
-      const length = await client.xLen(this.streamKey);
+      const length = await client.xlen(this.streamKey);
 
       if (length > this.maxStreamLength) {
-        await client.xTrim(this.streamKey, 'MAXLEN', {
-          count: this.maxStreamLength,
-          approximateTrimming: true,
-        });
+        await client.xtrim(this.streamKey, 'MAXLEN', '~', this.maxStreamLength);
 
         this.logger.debug(
           { streamKey: this.streamKey, trimmedTo: this.maxStreamLength },

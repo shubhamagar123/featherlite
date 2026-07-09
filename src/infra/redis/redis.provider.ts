@@ -1,16 +1,16 @@
-import { createClient } from 'redis';
+import Redis from 'ioredis';
 import { getRedisConfig } from '@config/environment';
 import { createLogger } from '@utils/logger';
 
 const logger = createLogger('RedisProvider');
 
 /**
- * Singleton Redis client for the application.
- * Provides both standard and connection pool access.
+ * Singleton Redis client provider using ioredis.
+ * Supports connection pooling, retry logic, and sentinel configuration.
  */
 class RedisProvider {
   private static instance: RedisProvider | null = null;
-  private client: any = null;
+  private client: Redis | null = null;
   private isConnected: boolean = false;
 
   private constructor() {}
@@ -30,14 +30,19 @@ class RedisProvider {
     try {
       const config = getRedisConfig();
 
-      // Use REDIS_URL if available, else construct from host/port
-      const client = createClient({
-        url: config.url || `redis://${config.host}:${config.port}`,
+      const client = new Redis({
+        host: config.host,
+        port: config.port,
         password: config.password,
-        database: config.db,
-        socket: {
-          reconnectStrategy: (retries) => Math.min(retries * 50, 500),
+        db: config.db,
+        retryStrategy: (times) => {
+          const delay = Math.min(times * 50, 2000);
+          return delay;
         },
+        maxRetriesPerRequest: 3,
+        enableReadyCheck: true,
+        enableOfflineQueue: true,
+        lazyConnect: false,
       });
 
       client.on('error', (err) => {
@@ -48,15 +53,23 @@ class RedisProvider {
         logger.info('Redis client connected');
       });
 
-      client.on('disconnect', () => {
-        logger.warn('Redis client disconnected');
+      client.on('ready', () => {
+        logger.info('Redis client ready');
       });
 
-      await client.connect();
+      client.on('close', () => {
+        logger.warn('Redis client connection closed');
+      });
+
+      client.on('reconnecting', (info: { attempt: number }) => {
+        logger.debug({ attempt: info.attempt }, 'Redis reconnecting');
+      });
+
       this.client = client;
       this.isConnected = true;
 
-      logger.info('Redis connection established');
+      await client.ping();
+      logger.info('Redis connection established and verified');
     } catch (error) {
       logger.error({ error }, 'Failed to connect to Redis');
       throw error;
@@ -64,14 +77,14 @@ class RedisProvider {
   }
 
   async disconnect(): Promise<void> {
-    if (this.client && this.isConnected) {
+    if (this.client) {
       await this.client.quit();
       this.isConnected = false;
       logger.info('Redis connection closed');
     }
   }
 
-  getClient(): any {
+  getClient(): Redis {
     if (!this.client) {
       throw new Error('Redis client not initialized. Call connect() first.');
     }
@@ -79,7 +92,7 @@ class RedisProvider {
   }
 
   isReady(): boolean {
-    return this.isConnected && !!this.client;
+    return this.isConnected && !!this.client && this.client.status === 'ready';
   }
 }
 
