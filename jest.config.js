@@ -21,11 +21,13 @@ export default {
     '^@events/(.*)$': '<rootDir>/src/events/$1',
     '^@validators/(.*)$': '<rootDir>/src/validators/$1',
     '^@infra/(.*)$': '<rootDir>/src/infra/$1',
+    '^@api/(.*)$': '<rootDir>/src/api/$1',
   },
   transform: {
     '^.+\\.ts$': [
       'ts-jest',
       {
+        isolatedModules: true,
         tsconfig: {
           esModuleInterop: true,
           allowSyntheticDefaultImports: true,
@@ -65,11 +67,6 @@ export default {
   setupFiles: ['<rootDir>/tests/env.setup.ts'],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   testTimeout: 10000,
-  globals: {
-    'ts-jest': {
-      isolatedModules: true,
-    },
-  },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   extensionsToTreatAsEsm: ['.ts'],
 };
