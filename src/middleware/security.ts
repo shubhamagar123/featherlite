@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
+import { randomUUID } from 'crypto';
 import { environment } from '@config/environment';
 
 export const securityHeaders = helmet({
@@ -42,8 +43,17 @@ export const corsMiddleware = cors({
 });
 
 export function requestIdMiddleware(req: Request, res: Response, next: NextFunction): void {
-  const requestId = req.headers['x-request-id'] || req.id;
-  req.id = String(requestId);
+  let requestId = String(req.headers['x-request-id'] || req.id || '');
+
+  // Validate request ID format: alphanumeric, dash, underscore only, max 64 chars
+  const isValidFormat = /^[A-Za-z0-9_-]{1,64}$/.test(requestId);
+
+  if (!isValidFormat || !requestId) {
+    // Generate a new UUID if invalid or missing
+    requestId = randomUUID();
+  }
+
+  req.id = requestId;
   res.setHeader('X-Request-ID', req.id);
   next();
 }
