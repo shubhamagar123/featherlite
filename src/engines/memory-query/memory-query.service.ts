@@ -1,4 +1,4 @@
-import { Result } from '../../services/types/result.type';
+import { Result } from '@services/types/result.type';
 import {
   MemoryQuery,
   MemoryQueryResult,

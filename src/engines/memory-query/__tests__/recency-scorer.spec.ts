@@ -1,6 +1,6 @@
 import { RecencyScorer } from '../scorers/recency-scorer';
 import { Memory } from '@engines/memory/dtos/memory.dto';
-import { MemoryType } from '../../../engines/memory/enums/memory.enums';
+import { MemoryType } from '@engines/memory/enums/memory.enums';
 
 describe('RecencyScorer', () => {
   let scorer: RecencyScorer;

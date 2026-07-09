@@ -1,4 +1,4 @@
-import { Result } from '../../../services/types/result.type';
+import { Result } from '@services/types/result.type';
 import { MemoryQueryResult, QueryCacheEntry } from '../dto/memory-query.dto';
 import { IMemoryCache } from '../interfaces/memory-query.interfaces';
 

@@ -1,4 +1,4 @@
-import { Result } from '../../../services/types/result.type';
+import { Result } from '@services/types/result.type';
 import { Memory } from '@engines/memory/dtos/memory.dto';
 import { IMemoryScorer } from '../interfaces/memory-query.interfaces';
 

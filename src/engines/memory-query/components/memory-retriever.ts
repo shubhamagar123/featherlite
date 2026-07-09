@@ -1,7 +1,7 @@
-import { Result } from '../../../services/types/result.type';
+import { Result } from '@services/types/result.type';
 import { Memory, MemorySearchQuery } from '@engines/memory/dtos/memory.dto';
-import { SearchType } from '../../../engines/memory/enums/memory.enums';
-import { getMemoryEngine } from '../../../engines/memory/memory.factory';
+import { SearchType } from '@engines/memory/enums/memory.enums';
+import { getMemoryEngine } from '@engines/memory/memory.factory';
 import { MemoryQuery } from '../dto/memory-query.dto';
 import { MemoryQueryType, QueryScope } from '../enums/memory-query.enums';
 import { IMemoryRetriever } from '../interfaces/memory-query.interfaces';
