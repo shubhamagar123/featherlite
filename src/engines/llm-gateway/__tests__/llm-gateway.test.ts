@@ -93,6 +93,69 @@ describe('LLMGateway', () => {
     expect(second.value?.content).toBe('cached');
   });
 
+  it('namespaces cache by userId - different users get different cache entries', async () => {
+    const factory = new LLMProviderFactory();
+    let callCount = 0;
+    const transport: LLMProviderTransport = {
+      async invoke() {
+        callCount++;
+        return {
+          content: `response-${callCount}`,
+          finishReason: LLMFinishReason.STOP,
+          promptTokens: 10,
+          completionTokens: 5,
+          model: 'test-model',
+        };
+      },
+      async *invokeStream() {
+        yield { delta: 'ok', finished: true, finishReason: LLMFinishReason.STOP };
+      },
+    };
+    const providers = [factory.create(DEFAULT_PROVIDER_CONFIGS[0], transport)];
+    const gateway = getLLMGateway({ providers });
+
+    const cacheKey = 'shared-key';
+    const ttl = 60_000;
+
+    // User 1 makes request - cache miss
+    const user1First = await gateway.complete(
+      makeRequest({ userId: 'user1', cacheKey, cacheTtlMs: ttl })
+    );
+    expect(user1First.value?.cached).toBe(false);
+    expect(user1First.value?.content).toBe('response-1');
+
+    // User 2 makes same request - should be cache miss (different userId)
+    const user2First = await gateway.complete(
+      makeRequest({ userId: 'user2', cacheKey, cacheTtlMs: ttl })
+    );
+    expect(user2First.value?.cached).toBe(false);
+    expect(user2First.value?.content).toBe('response-2');
+
+    // User 1 repeats request - should be cache hit
+    const user1Second = await gateway.complete(
+      makeRequest({ userId: 'user1', cacheKey, cacheTtlMs: ttl })
+    );
+    expect(user1Second.value?.cached).toBe(true);
+    expect(user1Second.value?.content).toBe('response-1');
+
+    // User 2 repeats request - should be cache hit with its own cached response
+    const user2Second = await gateway.complete(
+      makeRequest({ userId: 'user2', cacheKey, cacheTtlMs: ttl })
+    );
+    expect(user2Second.value?.cached).toBe(true);
+    expect(user2Second.value?.content).toBe('response-2');
+
+    // No request made without userId should use cache key alone
+    const noUserReq = await gateway.complete(makeRequest({ cacheKey, cacheTtlMs: ttl }));
+    expect(noUserReq.value?.cached).toBe(false);
+    expect(noUserReq.value?.content).toBe('response-3');
+
+    // Same request without userId should hit its own cache
+    const noUserReq2 = await gateway.complete(makeRequest({ cacheKey, cacheTtlMs: ttl }));
+    expect(noUserReq2.value?.cached).toBe(true);
+    expect(noUserReq2.value?.content).toBe('response-3');
+  });
+
   it('falls back to another provider on repeated failure', async () => {
     const factory = new LLMProviderFactory();
     const openai = factory.create(
