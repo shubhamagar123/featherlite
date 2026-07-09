@@ -1,5 +1,5 @@
 import { Result } from '../../../services/types/result.type';
-import { MemorySnapshot } from '../dto/memory.dto';
+import { MemorySnapshot } from '../dtos/memory.dto';
 import { MemoryType, MemoryStatus } from '../enums/memory.enums';
 import { IMemorySnapshotBuilder, IMemoryRepository } from '../interfaces/memory.interfaces';
 

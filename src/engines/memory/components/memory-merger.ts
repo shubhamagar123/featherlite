@@ -1,5 +1,5 @@
 import { Result } from '../../../services/types/result.type';
-import { Memory, MemoryMergeResult } from '../dto/memory.dto';
+import { Memory, MemoryMergeResult } from '../dtos/memory.dto';
 import { MemoryStatus } from '../enums/memory.enums';
 import { IMemoryMerger } from '../interfaces/memory.interfaces';
 import { v4 as uuid } from 'uuid';

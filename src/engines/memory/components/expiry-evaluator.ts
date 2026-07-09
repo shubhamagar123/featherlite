@@ -1,5 +1,5 @@
 import { Result } from '../../../services/types/result.type';
-import { ExpiryDecision, Memory } from '../dto/memory.dto';
+import { ExpiryDecision, Memory } from '../dtos/memory.dto';
 import { MemoryType, MemoryStatus } from '../enums/memory.enums';
 import { IExpiryEvaluator } from '../interfaces/memory.interfaces';
 

@@ -1,5 +1,5 @@
 import { Result } from '../../../services/types/result.type';
-import { Entity, EntityExtractionResult } from '../dto/memory.dto';
+import { Entity, EntityExtractionResult } from '../dtos/memory.dto';
 import { EntityType } from '../enums/memory.enums';
 import { IEntityExtractor } from '../interfaces/memory.interfaces';
 import { v4 as uuid } from 'uuid';

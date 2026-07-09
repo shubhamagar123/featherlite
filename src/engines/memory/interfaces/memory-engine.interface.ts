@@ -3,7 +3,7 @@ import {
   MemorySnapshotDTO,
   RetrieveCriticalMemoriesOptions,
   CriticalMemoriesSliceDTO,
-} from '../dtos/memory-engine.dto';
+} from '../dtos/memory.dto';
 
 export interface IMemoryEngine {
   /**

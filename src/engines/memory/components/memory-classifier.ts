@@ -1,5 +1,5 @@
 import { Result } from '../../../services/types/result.type';
-import { ClassificationResult, Entity } from '../dto/memory.dto';
+import { ClassificationResult, Entity } from '../dtos/memory.dto';
 import { MemoryType } from '../enums/memory.enums';
 import { IMemoryClassifier } from '../interfaces/memory.interfaces';
 

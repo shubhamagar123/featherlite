@@ -1,5 +1,5 @@
 import { Result } from '../../../services/types/result.type';
-import { ConflictResolutionResult, Memory } from '../dto/memory.dto';
+import { ConflictResolutionResult, Memory } from '../dtos/memory.dto';
 import { IConflictResolver } from '../interfaces/memory.interfaces';
 
 export class ConflictResolver implements IConflictResolver {

@@ -1,5 +1,5 @@
 import { Result } from '../../../services/types/result.type';
-import { ImportanceEvaluationResult, Memory } from '../dto/memory.dto';
+import { ImportanceEvaluationResult, Memory } from '../dtos/memory.dto';
 import { MemoryType } from '../enums/memory.enums';
 import { IImportanceEvaluator } from '../interfaces/memory.interfaces';
 

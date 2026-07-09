@@ -1,5 +1,5 @@
 import { Result } from '../../../services/types/result.type';
-import { Memory, RankingScores } from '../dto/memory.dto';
+import { Memory, RankingScores } from '../dtos/memory.dto';
 import { IMemoryRankingStrategy } from '../interfaces/memory.interfaces';
 
 export class MemoryRankingStrategy implements IMemoryRankingStrategy {

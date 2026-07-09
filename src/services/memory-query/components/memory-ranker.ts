@@ -1,5 +1,5 @@
 import { Result } from '../../../services/types/result.type';
-import { Memory } from '../../../engines/memory/dto/memory.dto';
+import { Memory } from '@engines/memory/dtos/memory.dto';
 import { RankedMemory, RankingConfig } from '../dto/memory-query.dto';
 import { RankingSignalType, RankingMode } from '../enums/memory-query.enums';
 import { IMemoryScorer, IMemoryRanker } from '../interfaces/memory-query.interfaces';

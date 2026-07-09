@@ -3,7 +3,7 @@ import { RecencyScorer } from '../scorers/recency-scorer';
 import { ImportanceScorer } from '../scorers/importance-scorer';
 import { ConfidenceScorer } from '../scorers/confidence-scorer';
 import { RankingMode, RankingSignalType } from '../enums/memory-query.enums';
-import { Memory } from '../../../engines/memory/dto/memory.dto';
+import { Memory } from '@engines/memory/dtos/memory.dto';
 import { MemoryType } from '../../../engines/memory/enums/memory.enums';
 
 describe('MemoryRanker', () => {

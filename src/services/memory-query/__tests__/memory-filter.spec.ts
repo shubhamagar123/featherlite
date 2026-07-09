@@ -1,6 +1,6 @@
 import { MemoryFilter } from '../components/memory-filter';
 import { FilterType } from '../enums/memory-query.enums';
-import { Memory } from '../../../engines/memory/dto/memory.dto';
+import { Memory } from '@engines/memory/dtos/memory.dto';
 import { MemoryType, MemoryStatus } from '../../../engines/memory/enums/memory.enums';
 
 describe('MemoryFilter', () => {

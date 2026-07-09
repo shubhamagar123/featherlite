@@ -1,4 +1,4 @@
-import { Memory, MemorySearchQuery } from '../../../engines/memory/dto/memory.dto';
+import { Memory, MemorySearchQuery } from '@engines/memory/dtos/memory.dto';
 import {
   MemoryQueryType,
   RankingSignalType,

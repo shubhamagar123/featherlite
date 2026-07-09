@@ -1,5 +1,5 @@
 import { Result } from '../../../services/types/result.type';
-import { Memory } from '../../../engines/memory/dto/memory.dto';
+import { Memory } from '@engines/memory/dtos/memory.dto';
 import { IMemoryContextMatcher } from '../interfaces/memory-query.interfaces';
 
 interface MatcherContext {

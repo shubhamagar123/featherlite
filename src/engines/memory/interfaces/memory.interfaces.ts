@@ -12,7 +12,7 @@ import {
   ClassificationResult,
   ImportanceEvaluationResult,
   ConflictResolutionResult,
-} from '../dto/memory.dto';
+} from '../dtos/memory.dto';
 import { EventEnvelope } from '../../event/dto/event.dto';
 import { MemoryType, MemoryStatus } from '../enums/memory.enums';
 

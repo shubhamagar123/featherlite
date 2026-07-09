@@ -3,7 +3,7 @@ import {
   Memory,
   MemorySearchQuery,
   MemorySearchResult,
-} from '../dto/memory.dto';
+} from '../dtos/memory.dto';
 import { SearchType } from '../enums/memory.enums';
 import { IMemorySearcher, IMemoryRepository } from '../interfaces/memory.interfaces';
 import { MemoryIndexer } from './memory-indexer';

@@ -1,5 +1,5 @@
 import { Result } from '../../../services/types/result.type';
-import { Memory } from '../dto/memory.dto';
+import { Memory } from '../dtos/memory.dto';
 import { MemoryType, MemoryStatus } from '../enums/memory.enums';
 import { IMemoryRetentionStrategy } from '../interfaces/memory.interfaces';
 

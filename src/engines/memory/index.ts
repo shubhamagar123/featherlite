@@ -12,4 +12,4 @@ export type {
   RetrieveCriticalMemoriesOptions,
   CriticalMemoryItemDTO,
   CriticalMemoriesSliceDTO,
-} from './dtos/memory-engine.dto';
+} from './dtos/memory.dto';

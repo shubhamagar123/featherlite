@@ -1,5 +1,5 @@
 import { Result } from '../../../services/types/result.type';
-import { Memory } from '../../../engines/memory/dto/memory.dto';
+import { Memory } from '@engines/memory/dtos/memory.dto';
 import { MemoryStatus } from '../../../engines/memory/enums/memory.enums';
 import { FilterCriteria } from '../dto/memory-query.dto';
 import { FilterType } from '../enums/memory-query.enums';

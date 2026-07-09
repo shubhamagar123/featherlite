@@ -6,7 +6,10 @@ import {
   MemorySnapshot,
   ConflictResolutionResult,
   MemoryMergeResult,
-} from './dto/memory.dto';
+  MemorySnapshotDTO,
+  RetrieveCriticalMemoriesOptions,
+  CriticalMemoriesSliceDTO,
+} from './dtos/memory.dto';
 import { MemoryType, MemoryStatus, MemoryVisibility } from './enums/memory.enums';
 import {
   IMemoryOperations,
@@ -25,11 +28,6 @@ import {
   IMemoryTimeline,
 } from './interfaces/memory.interfaces';
 import { IMemoryEngine } from './interfaces/memory-engine.interface';
-import {
-  MemorySnapshotDTO,
-  RetrieveCriticalMemoriesOptions,
-  CriticalMemoriesSliceDTO,
-} from './dtos/memory-engine.dto';
 import { IResult, Result as ResultAsync } from '../../services/types/result.type';
 import { v4 as uuid } from 'uuid';
 
