@@ -1,6 +1,9 @@
 import { createApp } from './app';
 import { environment } from '@config/environment';
 import { logger } from '@utils/logger';
+import { initializeTracing, shutdownTracing } from '@infra/tracing/otel';
+import { initializeMetrics } from '@infra/observability/metrics';
+import { getDeploymentConfig } from '@config/deployment';
 
 const app = createApp();
 
@@ -11,12 +14,20 @@ interface ServerOptions {
 
 export async function startServer(options: ServerOptions = { port: environment.PORT }): Promise<void> {
   const { port, host = '0.0.0.0' } = options;
+  const deploymentConfig = getDeploymentConfig();
+
+  // Initialize observability
+  if (deploymentConfig.otel.enabled) {
+    await initializeTracing();
+    initializeMetrics();
+  }
 
   return new Promise((resolve, reject) => {
     const server = app.listen(port, host, () => {
       logger.info(`🚀 Server running on http://${host}:${port}`);
       logger.info(`📊 Environment: ${environment.NODE_ENV}`);
       logger.info(`🔍 Log Level: ${environment.LOG_LEVEL}`);
+      logger.info(`📊 Observability: ${deploymentConfig.otel.enabled ? 'enabled' : 'disabled'}`);
       resolve();
     });
 
@@ -31,14 +42,35 @@ export async function startServer(options: ServerOptions = { port: environment.P
 
       // Close incoming connections
       server.close(async () => {
-        logger.info('HTTP server closed');
+        try {
+          logger.info('HTTP server closed');
 
-        // TODO: Close database connections
-        // TODO: Close Redis connections
-        // TODO: Close Socket.io connections
+          // Close database connections
+          const { prisma } = await import('@database/prisma');
+          await prisma.$disconnect();
+          logger.info('Database connections closed');
 
-        logger.info('✅ Graceful shutdown complete');
-        process.exit(0);
+          // Close Redis connections
+          try {
+            const { getRedisClient } = await import('@infra/redis/redis.provider');
+            const redis = getRedisClient();
+            await redis.quit();
+            logger.info('Redis connections closed');
+          } catch {
+            // Redis might not be initialized
+          }
+
+          // Shutdown tracing
+          if (deploymentConfig.otel.enabled) {
+            await shutdownTracing();
+          }
+
+          logger.info('✅ Graceful shutdown complete');
+          process.exit(0);
+        } catch (error) {
+          logger.error({ error }, 'Error during graceful shutdown');
+          process.exit(1);
+        }
       });
 
       // Force shutdown after 30 seconds
