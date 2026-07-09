@@ -20,6 +20,7 @@ export default {
     '^@constants/(.*)$': '<rootDir>/src/constants/$1',
     '^@events/(.*)$': '<rootDir>/src/events/$1',
     '^@validators/(.*)$': '<rootDir>/src/validators/$1',
+    '^@infra/(.*)$': '<rootDir>/src/infra/$1',
   },
   transform: {
     '^.+\\.ts$': [

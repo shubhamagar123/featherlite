@@ -66,6 +66,7 @@ const envSchema = z
     FEATURE_VOICE_ENABLED: boolEnv(true),
     FEATURE_VIDEO_ENABLED: boolEnv(false),
     FEATURE_ANALYTICS_ENABLED: boolEnv(true),
+    FEATURE_BULLMQ_DISPATCHER: boolEnv(false),
 
     // Rate Limiting
     RATE_LIMIT_WINDOW_MS: z.coerce.number().default(900000),

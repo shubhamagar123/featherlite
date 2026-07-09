@@ -19,7 +19,8 @@
       "@config/*": ["./config/*"],
       "@constants/*": ["./constants/*"],
       "@events/*": ["./events/*"],
-      "@validators/*": ["./validators/*"]
+      "@validators/*": ["./validators/*"],
+      "@infra/*": ["./infra/*"]
     },
     "strict": true,
     "esModuleInterop": true,

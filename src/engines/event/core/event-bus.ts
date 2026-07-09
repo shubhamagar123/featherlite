@@ -5,7 +5,9 @@ import { EventEnvelope, DeadLetterEntry, EventMetrics, DomainEventPayload, Event
 import { EventType, EventDispatchMode, EventStatus } from '../enums/event.enums';
 import { EventRegistry } from './event-registry';
 import { EventDispatcher } from './event-dispatcher';
+import { BullMQDispatcher } from './bullmq-dispatcher';
 import { createLogger } from '@utils/logger';
+import { getEnvironment } from '@config/environment';
 import type { Logger } from 'pino';
 
 export class EventBus implements IEventBus {
@@ -25,8 +27,24 @@ export class EventBus implements IEventBus {
 
   constructor(retryPolicy?: EventRetryPolicy) {
     this.registry = new EventRegistry();
-    this.dispatcher = new EventDispatcher(this.registry, retryPolicy);
+    this.dispatcher = this.createDispatcher(retryPolicy);
     this.logger = createLogger('EventBus');
+  }
+
+  private createDispatcher(retryPolicy?: EventRetryPolicy): IEventDispatcher {
+    const env = getEnvironment();
+
+    if (env.FEATURE_BULLMQ_DISPATCHER) {
+      try {
+        this.logger.info('Using BullMQ dispatcher for event processing');
+        return new BullMQDispatcher(this.registry, retryPolicy);
+      } catch (error) {
+        this.logger.warn({ error }, 'Failed to initialize BullMQ dispatcher, falling back to default');
+        return new EventDispatcher(this.registry, retryPolicy);
+      }
+    }
+
+    return new EventDispatcher(this.registry, retryPolicy);
   }
 
   async publish<T extends DomainEventPayload>(

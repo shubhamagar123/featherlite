@@ -59,6 +59,7 @@ export { EventSerializer } from './core/event-serializer';
 export { EventBus } from './core/event-bus';
 export { EventRegistry } from './core/event-registry';
 export { EventDispatcher } from './core/event-dispatcher';
+export { BullMQDispatcher } from './core/bullmq-dispatcher';
 export * from './dto/event.dto';
 export * from './enums/event.enums';
 export * from './events/index';
