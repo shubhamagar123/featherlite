@@ -84,3 +84,4 @@ class RedisProvider {
 }
 
 export const redisProvider = RedisProvider.getInstance();
+export { RedisProvider };

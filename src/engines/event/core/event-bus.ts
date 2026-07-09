@@ -8,6 +8,7 @@ import { EventDispatcher } from './event-dispatcher';
 import { BullMQDispatcher } from './bullmq-dispatcher';
 import { createLogger } from '@utils/logger';
 import { getEnvironment } from '@config/environment';
+import { redisDLQService, redisProvider } from '@infra/redis';
 import type { Logger } from 'pino';
 
 export class EventBus implements IEventBus {
@@ -15,6 +16,7 @@ export class EventBus implements IEventBus {
   private readonly dispatcher: IEventDispatcher;
   private readonly logger: Logger;
   private deadLetterQueue: DeadLetterEntry[] = [];
+  private useRedisForDLQ: boolean = false;
   private metrics: EventMetrics = {
     published: 0,
     processed: 0,
@@ -29,6 +31,7 @@ export class EventBus implements IEventBus {
     this.registry = new EventRegistry();
     this.dispatcher = this.createDispatcher(retryPolicy);
     this.logger = createLogger('EventBus');
+    this.useRedisForDLQ = this.checkRedisAvailability();
   }
 
   private createDispatcher(retryPolicy?: EventRetryPolicy): IEventDispatcher {
@@ -45,6 +48,19 @@ export class EventBus implements IEventBus {
     }
 
     return new EventDispatcher(this.registry, retryPolicy);
+  }
+
+  private checkRedisAvailability(): boolean {
+    try {
+      if (redisProvider.isReady()) {
+        this.logger.info('Using Redis for dead-letter queue persistence');
+        return true;
+      }
+    } catch {
+      // Redis not available, fall through
+    }
+    this.logger.info('Using in-memory dead-letter queue');
+    return false;
   }
 
   async publish<T extends DomainEventPayload>(
@@ -138,6 +154,9 @@ export class EventBus implements IEventBus {
   }
 
   getDeadLetterQueue(): DeadLetterEntry[] {
+    if (this.useRedisForDLQ) {
+      return this.deadLetterQueue;
+    }
     return [...this.deadLetterQueue];
   }
 
@@ -157,6 +176,10 @@ export class EventBus implements IEventBus {
     };
     this.processingTimes = [];
     (this.registry as EventRegistry).clear();
+
+    if (this.useRedisForDLQ) {
+      void redisDLQService.clear();
+    }
   }
 
   private addToDeadLetterQueue(envelope: EventEnvelope, reason: string): void {
@@ -168,7 +191,12 @@ export class EventBus implements IEventBus {
       handlers: handlers.map(h => h.handler.getMetadata()),
     };
 
-    this.deadLetterQueue.push(entry);
+    if (this.useRedisForDLQ) {
+      void redisDLQService.append(entry);
+    } else {
+      this.deadLetterQueue.push(entry);
+    }
+
     this.metrics.deadLettered++;
 
     this.logger.warn(
