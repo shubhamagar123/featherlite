@@ -1,5 +1,14 @@
 import type { Application } from 'express';
 import { logger } from '@utils/logger';
+import { registerAuthRoutes } from './auth/auth.routes';
+import { registerUserRoutes } from './user/user.routes';
+import { registerCompanionRoutes } from './companion/companion.routes';
+import { registerConversationRoutes } from './conversation/conversation.routes';
+import { registerMemoryRoutes } from './memory/memory.routes';
+import { registerRelationshipRoutes } from './relationship/relationship.routes';
+import { registerNotificationRoutes } from './notification/notification.routes';
+import { registerMomentRoutes } from './moment/moment.routes';
+import { serveOpenApiSpec } from './openapi';
 
 /**
  * Route registry for API modules
@@ -17,16 +26,26 @@ export interface IRouteModule {
 export async function mountApi(app: Application): Promise<void> {
   logger.info('🚀 Mounting API routes...');
 
-  // Dynamic module loading will happen here
-  // For now, we'll import modules as they're implemented
+  try {
+    // Register all route modules in order
+    await registerAuthRoutes(app);
+    await registerUserRoutes(app);
+    await registerCompanionRoutes(app);
+    await registerConversationRoutes(app);
+    await registerMemoryRoutes(app);
+    await registerRelationshipRoutes(app);
+    await registerNotificationRoutes(app);
+    await registerMomentRoutes(app);
 
-  // TODO: Import and register each module
-  // import { registerAuthRoutes } from './auth';
-  // import { registerUserRoutes } from './user';
-  // import { registerCompanionRoutes } from './companion';
-  // etc.
+    // Serve OpenAPI documentation
+    serveOpenApiSpec(app);
+    logger.info('✅ OpenAPI documentation available at /api/v1/docs');
 
-  logger.info('✅ API routes mounted');
+    logger.info('✅ All API routes mounted successfully');
+  } catch (error) {
+    logger.error({ error }, 'Failed to mount API routes');
+    throw error;
+  }
 }
 
 /**

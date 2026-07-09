@@ -48,36 +48,32 @@ export function createApp(): Application {
     res.status(statusCode).json(readiness);
   });
 
-  // API routes will be mounted here in Step 3
-  // Example placeholder:
+  // API info endpoint
   app.get('/api/info', (_req, res) => {
     res.json({
       message: 'Featherlight Backend API',
-      version: '0.1.0',
+      version: '1.0.0',
       environment: environment.NODE_ENV,
+      docsUrl: '/api/v1/docs',
+      specUrl: '/api/v1/openapi.json',
       modules: {
-        auth: 'pending',
-        users: 'pending',
-        companions: 'pending',
-        conversations: 'pending',
-        memory: 'pending',
-        relationships: 'pending',
-        moments: 'pending',
-        notifications: 'pending',
-        worlds: 'pending',
-        scenes: 'pending',
-        activities: 'pending',
-        weather: 'pending',
-        outfits: 'pending',
-        media: 'pending',
-        voice: 'pending',
-        admin: 'pending',
-        analytics: 'pending',
+        auth: 'active',
+        users: 'active',
+        companions: 'active',
+        conversations: 'active',
+        memory: 'active',
+        relationships: 'active',
+        moments: 'active',
+        notifications: 'active',
       },
     });
   });
 
-  // 404 handler
+  // Mount all API routes
+  const { mountApi } = await import('@api/index');
+  await mountApi(app);
+
+  // 404 handler (must be after all routes)
   app.use(notFoundMiddleware);
 
   // Error handling middleware (must be last)
