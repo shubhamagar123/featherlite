@@ -12,6 +12,10 @@
  *  - `mulberry32` — a tiny, high-quality deterministic PRNG seeded by a number.
  */
 
+// Import and re-export from shared kernel
+import type { WeightedOption } from '@engines/shared';
+export type { WeightedOption };
+
 /**
  * FNV-1a 32-bit hash. Pure and deterministic for a given input string.
  *
@@ -44,12 +48,6 @@ export function mulberry32(seed: number): () => number {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-}
-
-/** A candidate value paired with a relative selection weight. */
-export interface WeightedOption<T> {
-  value: T;
-  weight: number;
 }
 
 /**

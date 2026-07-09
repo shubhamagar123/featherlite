@@ -7,7 +7,8 @@
  * suppresses open-air spots). Deterministic, with a salted tie-break.
  */
 
-import { Weather, type WeightedOption } from '@engines/world';
+import { Result, IResult } from '@services/types/result.type';
+import { Weather, type WeightedOption } from '@engines/shared';
 import { CompanionLocation, CompanionState } from '../enums/companion.enums';
 import { ILocationInput, ILocationManager, ICompanionRules } from '../interfaces/managers.interface';
 import { DefaultCompanionRules } from '../rules/companion.rules';
@@ -58,7 +59,7 @@ const OUTDOOR = new Set<CompanionLocation>([
 export class LocationManager implements ILocationManager {
   constructor(private readonly rules: ICompanionRules = new DefaultCompanionRules()) {}
 
-  resolve(input: ILocationInput): CompanionLocation {
+  resolve(input: ILocationInput): IResult<CompanionLocation> {
     const { context, state } = input;
     const base = { ...STATE_LOCATIONS[state] };
 
@@ -78,7 +79,7 @@ export class LocationManager implements ILocationManager {
       if (weight > 0) options.push({ value: key, weight });
     }
 
-    if (options.length === 0) return CompanionLocation.LIVING_ROOM;
-    return context.rngFor('location').weightedPick(options);
+    const location = options.length === 0 ? CompanionLocation.LIVING_ROOM : context.rngFor('location').weightedPick(options);
+    return Result.success(location);
   }
 }

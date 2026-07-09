@@ -6,7 +6,8 @@
  * looking outside, mornings invite coffee). Deterministic, salted tie-break.
  */
 
-import { TimeOfDay, type WeightedOption } from '@engines/world';
+import { Result, IResult } from '@services/types/result.type';
+import { TimeOfDay, type WeightedOption } from '@engines/shared';
 import { CompanionLocation, CompanionState, Gesture } from '../enums/companion.enums';
 import { IGestureInput, IGestureManager } from '../interfaces/managers.interface';
 
@@ -39,7 +40,7 @@ const LEISURELY = new Set<CompanionState>([
 ]);
 
 export class GestureManager implements IGestureManager {
-  resolve(input: IGestureInput): Gesture {
+  resolve(input: IGestureInput): IResult<Gesture> {
     const { context, state, location } = input;
     const weights: Partial<Record<Gesture, number>> = { ...STATE_GESTURES[state] };
     const add = (gesture: Gesture, amount: number): void => {
@@ -75,6 +76,7 @@ export class GestureManager implements IGestureManager {
       weight: weights[g] ?? 0,
     }));
 
-    return context.rngFor('gesture').weightedPick(options);
+    const gesture = context.rngFor('gesture').weightedPick(options);
+    return Result.success(gesture);
   }
 }

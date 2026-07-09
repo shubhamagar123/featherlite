@@ -4,28 +4,13 @@
  * Every value the World Engine can produce is enumerated here. Selectors and
  * strategies operate exclusively on these enums so the world model is a closed,
  * fully-typed vocabulary. No free-form strings are used inside the engine.
- */
-
-/**
- * WorldMode drives the 70-20-10 generation rule.
  *
- * - HOME (70%): the companion is at home living an ordinary domestic day.
- * - DAILY_LIFE (20%): the companion is out doing everyday things (cafe, park, drive).
- * - SPECIAL_MOMENT (10%): a rarer, heightened, celebratory day.
+ * Note: TimeOfDay, Weather, Scene, and WorldMode are now defined in @engines/shared
+ * and re-exported here for backwards compatibility.
  */
-export enum WorldMode {
-  HOME = 'HOME',
-  DAILY_LIFE = 'DAILY_LIFE',
-  SPECIAL_MOMENT = 'SPECIAL_MOMENT',
-}
 
-/** Coarse period of the day, derived deterministically from the local clock. */
-export enum TimeOfDay {
-  MORNING = 'MORNING',
-  AFTERNOON = 'AFTERNOON',
-  EVENING = 'EVENING',
-  NIGHT = 'NIGHT',
-}
+// Re-export shared kernel enums for backwards compatibility
+export { TimeOfDay, Weather, Scene, WorldMode } from '@engines/shared';
 
 /** Meteorological season, derived deterministically from the calendar month. */
 export enum Season {
@@ -33,28 +18,6 @@ export enum Season {
   SUMMER = 'SUMMER',
   AUTUMN = 'AUTUMN',
   WINTER = 'WINTER',
-}
-
-/** Weather condition for the world. */
-export enum Weather {
-  SUNNY = 'SUNNY',
-  CLOUDY = 'CLOUDY',
-  RAIN = 'RAIN',
-  STORM = 'STORM',
-  FOG = 'FOG',
-  WINDY = 'WINDY',
-}
-
-/** Scene / location the companion currently occupies. */
-export enum Scene {
-  BALCONY = 'BALCONY',
-  LIVING_ROOM = 'LIVING_ROOM',
-  KITCHEN = 'KITCHEN',
-  STUDY = 'STUDY',
-  POOL = 'POOL',
-  CAFE = 'CAFE',
-  PARK = 'PARK',
-  DRIVE = 'DRIVE',
 }
 
 /** Activity the companion is engaged in. */

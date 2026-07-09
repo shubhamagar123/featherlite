@@ -179,11 +179,21 @@ export class CompanionEngine implements ICompanionEngine {
     const block = this.deps.scheduler.resolveBlock(context.profile.schedule, context.localHour);
     const state = this.deps.stateMachine.resolveState(context, block);
     const mood = this.deps.rules.deriveMood({ context, state });
-    const location = this.deps.locationManager.resolve({ context, state });
-    const expression = this.deps.expressionManager.resolve({ context, state, mood });
-    const gesture = this.deps.gestureManager.resolve({ context, state, location });
-    const outfit = this.deps.outfitManager.resolve({ context, state, location });
-    const availability = this.deps.availabilityManager.resolve({ context, state, mood });
+
+    const locationResult = this.deps.locationManager.resolve({ context, state });
+    const location = locationResult.getValueOrThrow();
+
+    const expressionResult = this.deps.expressionManager.resolve({ context, state, mood });
+    const expression = expressionResult.getValueOrThrow();
+
+    const gestureResult = this.deps.gestureManager.resolve({ context, state, location });
+    const gesture = gestureResult.getValueOrThrow();
+
+    const outfitResult = this.deps.outfitManager.resolve({ context, state, location });
+    const outfit = outfitResult.getValueOrThrow();
+
+    const availabilityResult = this.deps.availabilityManager.resolve({ context, state, mood });
+    const availability = availabilityResult.getValueOrThrow();
 
     return {
       companionId: context.profile.id,

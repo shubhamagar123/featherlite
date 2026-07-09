@@ -6,7 +6,9 @@
  * the companion's own state and location. Almost entirely rule-driven.
  */
 
-import { Outfit as WorldOutfit, WorldMode } from '@engines/world';
+import { Result, IResult } from '@services/types/result.type';
+import { WorldMode } from '@engines/shared';
+import { Outfit as WorldOutfit } from '@engines/world';
 import { CompanionLocation, CompanionOutfit, CompanionState } from '../enums/companion.enums';
 import { IOutfitInput, IOutfitManager } from '../interfaces/managers.interface';
 
@@ -41,25 +43,26 @@ const HOMEBODY_STATES = new Set<CompanionState>([
 ]);
 
 export class OutfitManager implements IOutfitManager {
-  resolve(input: IOutfitInput): CompanionOutfit {
+  resolve(input: IOutfitInput): IResult<CompanionOutfit> {
     const { context, state, location } = input;
 
     // Hard rules, in priority order.
-    if (state === CompanionState.DRIVING) return CompanionOutfit.TRAVEL;
-    if (location === CompanionLocation.GYM) return CompanionOutfit.GYM;
-    if (context.world.mode === WorldMode.SPECIAL_MOMENT) return CompanionOutfit.FESTIVAL;
+    if (state === CompanionState.DRIVING) return Result.success(CompanionOutfit.TRAVEL);
+    if (location === CompanionLocation.GYM) return Result.success(CompanionOutfit.GYM);
+    if (context.world.mode === WorldMode.SPECIAL_MOMENT) return Result.success(CompanionOutfit.FESTIVAL);
 
     if (state === CompanionState.WORKING) {
-      return HOME_LOCATIONS.has(location) ? CompanionOutfit.HOME : CompanionOutfit.OFFICE;
+      const outfit = HOME_LOCATIONS.has(location) ? CompanionOutfit.HOME : CompanionOutfit.OFFICE;
+      return Result.success(outfit);
     }
-    if (state === CompanionState.SLEEPING) return CompanionOutfit.HOME;
+    if (state === CompanionState.SLEEPING) return Result.success(CompanionOutfit.HOME);
 
     // At home and taking it easy => home wear regardless of world casual.
     if (HOME_LOCATIONS.has(location) && HOMEBODY_STATES.has(state)) {
-      return CompanionOutfit.HOME;
+      return Result.success(CompanionOutfit.HOME);
     }
 
     // Otherwise synchronize with the world's outfit choice.
-    return WORLD_OUTFIT[context.world.outfit] ?? CompanionOutfit.CASUAL;
+    return Result.success(WORLD_OUTFIT[context.world.outfit] ?? CompanionOutfit.CASUAL);
   }
 }

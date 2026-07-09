@@ -7,7 +7,8 @@
  * rules can be swapped without touching the rest of the engine.
  */
 
-import type { Scene, Weather } from '@engines/world';
+import type { Scene, Weather } from '@engines/shared';
+import { IResult } from '@services/types/result.type';
 import {
   Availability,
   CompanionLocation,
@@ -54,23 +55,23 @@ export interface IAvailabilityInput {
 }
 
 export interface IExpressionManager {
-  resolve(input: IExpressionInput): Expression;
+  resolve(input: IExpressionInput): IResult<Expression>;
 }
 
 export interface IGestureManager {
-  resolve(input: IGestureInput): Gesture;
+  resolve(input: IGestureInput): IResult<Gesture>;
 }
 
 export interface ILocationManager {
-  resolve(input: ILocationInput): CompanionLocation;
+  resolve(input: ILocationInput): IResult<CompanionLocation>;
 }
 
 export interface IOutfitManager {
-  resolve(input: IOutfitInput): CompanionOutfit;
+  resolve(input: IOutfitInput): IResult<CompanionOutfit>;
 }
 
 export interface IAvailabilityManager {
-  resolve(input: IAvailabilityInput): Availability;
+  resolve(input: IAvailabilityInput): IResult<Availability>;
 }
 
 /**

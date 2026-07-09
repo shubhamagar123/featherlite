@@ -5,7 +5,8 @@
  * Deterministic, with a salted tie-break among plausible expressions.
  */
 
-import { Weather, type WeightedOption } from '@engines/world';
+import { Result, IResult } from '@services/types/result.type';
+import { Weather, type WeightedOption } from '@engines/shared';
 import { CompanionMood, CompanionState, Expression } from '../enums/companion.enums';
 import { IExpressionInput, IExpressionManager } from '../interfaces/managers.interface';
 
@@ -25,11 +26,11 @@ const MOOD_EXPRESSIONS: Record<CompanionMood, Partial<Record<Expression, number>
 };
 
 export class ExpressionManager implements IExpressionManager {
-  resolve(input: IExpressionInput): Expression {
+  resolve(input: IExpressionInput): IResult<Expression> {
     const { context, state, mood } = input;
 
     // Sleeping is unambiguous.
-    if (state === CompanionState.SLEEPING) return Expression.SLEEPY;
+    if (state === CompanionState.SLEEPING) return Result.success(Expression.SLEEPY);
 
     const weights: Partial<Record<Expression, number>> = { ...MOOD_EXPRESSIONS[mood] };
     const add = (expr: Expression, amount: number): void => {
@@ -58,6 +59,7 @@ export class ExpressionManager implements IExpressionManager {
       (expr) => ({ value: expr, weight: weights[expr] ?? 0 })
     );
 
-    return context.rngFor('expression').weightedPick(options);
+    const expression = context.rngFor('expression').weightedPick(options);
+    return Result.success(expression);
   }
 }
