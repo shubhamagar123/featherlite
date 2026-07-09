@@ -1,7 +1,7 @@
 import { IResult, Result } from '@services/types/result.type';
 import { IPromptCompressor } from '../interfaces/prompt-compressor.interface';
 import { PromptPayload, CompressionStatistics } from '../dtos/prompt.dtos';
-import { CompressionLevel, CompressionStrategy, PromptStrategy } from '../enums/prompt.enums';
+import { CompressionLevel, CompressionStrategy, PromptType } from '../enums/prompt.enums';
 import { TokenBudgeter } from '../builders/token-budgeter';
 
 /**
@@ -18,9 +18,11 @@ export class PromptCompressor implements IPromptCompressor {
   async compress(
     prompt: PromptPayload,
     maxTokens: number,
-    level: CompressionLevel
+    level: CompressionLevel,
+    promptType?: PromptType
   ): Promise<IResult<{ prompt: PromptPayload; stats: CompressionStatistics }>> {
     try {
+      const strategy = this.selectStrategy(promptType);
       const originalLength = this.length(prompt);
       const segmentsAffected: string[] = [];
 
@@ -46,7 +48,7 @@ export class PromptCompressor implements IPromptCompressor {
       }
 
       // Layer 2: moderate truncation.
-      const trimmed = this.truncateUserPromptToBudget(working, maxTokens);
+      const trimmed = this.truncateUserPromptToBudget(working, maxTokens, strategy);
       if (this.length(trimmed) !== this.length(working)) segmentsAffected.push('user-prompt-truncate');
       working = trimmed;
 
@@ -62,7 +64,7 @@ export class PromptCompressor implements IPromptCompressor {
         working = { ...working, developerPrompt: undefined };
         segmentsAffected.push('developer-drop');
       }
-      const aggressive = this.truncateUserPromptToBudget(working, maxTokens);
+      const aggressive = this.truncateUserPromptToBudget(working, maxTokens, strategy);
       if (this.length(aggressive) !== this.length(working)) segmentsAffected.push('user-prompt-truncate-hard');
       working = aggressive;
 
@@ -87,24 +89,48 @@ export class PromptCompressor implements IPromptCompressor {
     };
   }
 
-  private truncateUserPromptToBudget(prompt: PromptPayload, maxTokens: number): PromptPayload {
+  private truncateUserPromptToBudget(
+    prompt: PromptPayload,
+    maxTokens: number,
+    strategy: CompressionStrategy = CompressionStrategy.KEEP_TAIL
+  ): PromptPayload {
     const sysTokens = this.budgeter.estimate(prompt.systemPrompt.content);
     const devTokens = prompt.developerPrompt
       ? this.budgeter.estimate(prompt.developerPrompt.content)
       : 0;
     const userBudget = Math.max(50, maxTokens - sysTokens - devTokens);
-    const truncated = this.truncateToTokens(prompt.userPrompt.content, userBudget);
+    const truncated = this.truncateToTokens(prompt.userPrompt.content, userBudget, strategy);
     return {
       ...prompt,
       userPrompt: { ...prompt.userPrompt, content: truncated, compressed: true },
     };
   }
 
-  private truncateToTokens(text: string, tokens: number): string {
+  private truncateToTokens(
+    text: string,
+    tokens: number,
+    strategy: CompressionStrategy = CompressionStrategy.KEEP_TAIL
+  ): string {
     const targetChars = Math.max(0, tokens * 4);
     if (text.length <= targetChars) return text;
-    // Keep tail — most recent context matters more.
-    return `…${text.slice(text.length - targetChars)}`;
+
+    switch (strategy) {
+      case CompressionStrategy.KEEP_HEAD:
+        // Keep initial context (good for JSON extraction, structured data)
+        return `${text.slice(0, targetChars)}…`;
+
+      case CompressionStrategy.KEEP_BOTH_ENDS:
+        // Keep beginning and end, drop middle
+        const halfChars = Math.floor(targetChars / 2);
+        const head = text.slice(0, halfChars);
+        const tail = text.slice(text.length - halfChars);
+        return `${head}…[TRUNCATED]…${tail}`;
+
+      case CompressionStrategy.KEEP_TAIL:
+      default:
+        // Keep most recent context (default for conversational)
+        return `…${text.slice(text.length - targetChars)}`;
+    }
   }
 
   private tokens(prompt: PromptPayload): number {
@@ -164,5 +190,14 @@ export class PromptCompressor implements IPromptCompressor {
       technique,
       segmentsAffected,
     };
+  }
+
+  private selectStrategy(promptType?: PromptType): CompressionStrategy {
+    // Memory extraction and relationship updates benefit from head-keeping (structured data)
+    if (promptType === PromptType.MEMORY_EXTRACTION || promptType === PromptType.RELATIONSHIP_UPDATE) {
+      return CompressionStrategy.KEEP_HEAD;
+    }
+    // Default to keeping most recent context for conversational and other types
+    return CompressionStrategy.KEEP_TAIL;
   }
 }
