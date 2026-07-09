@@ -5,6 +5,7 @@ import { EventType, EventDispatchMode } from '../enums/event.enums';
 import { createLogger } from '@utils/logger';
 import type { Logger } from 'pino';
 import { IResult, Result } from '@services/types/result.type';
+import { DeadLetterEventsRepository } from '@database/repositories/dead-letter-events.repository';
 
 /**
  * Base class for all broker adapters.
@@ -12,6 +13,7 @@ import { IResult, Result } from '@services/types/result.type';
  */
 export abstract class BaseBrokerAdapter implements IBrokerAdapter {
   protected readonly logger: Logger;
+  protected readonly deadLetterRepository: DeadLetterEventsRepository;
   protected deadLetterQueue: DeadLetterEntry[] = [];
   protected metrics: EventMetrics = {
     published: 0,
@@ -29,6 +31,7 @@ export abstract class BaseBrokerAdapter implements IBrokerAdapter {
 
   constructor(protected readonly brokerType: string) {
     this.logger = createLogger(`${this.brokerType}BrokerAdapter`);
+    this.deadLetterRepository = new DeadLetterEventsRepository();
   }
 
   abstract initialize(): Promise<IResult<void>>;
@@ -123,6 +126,28 @@ export abstract class BaseBrokerAdapter implements IBrokerAdapter {
     this.deadLetterQueue.push(entry);
     if (this.deadLetterQueue.length > 1000) {
       this.deadLetterQueue.shift();
+    }
+
+    this.persistDeadLetterEvent(entry).catch((err) => {
+      this.logger.error(
+        { error: err, eventId: envelope.metadata.eventId },
+        'Failed to persist dead letter event to database'
+      );
+    });
+  }
+
+  private async persistDeadLetterEvent(entry: DeadLetterEntry): Promise<void> {
+    try {
+      await this.deadLetterRepository.recordFailedEvent(entry);
+      this.logger.debug(
+        { eventId: entry.envelope.metadata.eventId },
+        'Dead letter event persisted to database'
+      );
+    } catch (error) {
+      this.logger.warn(
+        { error, eventId: entry.envelope.metadata.eventId },
+        'Could not persist dead letter event (continuing with in-memory storage)'
+      );
     }
   }
 

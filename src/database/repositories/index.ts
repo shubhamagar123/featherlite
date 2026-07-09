@@ -7,3 +7,5 @@ export { MessageRepository } from './message.repository';
 export { MemoryRepository } from './memory.repository';
 export { MomentRepository } from './moment.repository';
 export { NotificationRepository } from './notification.repository';
+export { ProcessedEventsRepository } from './processed-events.repository';
+export { DeadLetterEventsRepository } from './dead-letter-events.repository';

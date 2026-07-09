@@ -1065,6 +1065,37 @@ model ProcessedEvents {
   @@index([processedAt])
 }
 
+model DeadLetterEvents {
+  id String @id @default(cuid())
+
+  // Event identity
+  eventId String @unique
+  eventType String
+
+  // Event data
+  aggregateId String
+  aggregateType String
+  payload Json
+
+  // Failure details
+  reason String
+  attemptCount Int @default(0)
+  lastError String?
+
+  // Handler information
+  failedHandlers Json? // Array of handler metadata that failed
+
+  // Lifecycle
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  replayedAt DateTime?
+
+  @@index([eventType])
+  @@index([createdAt])
+  @@index([replayedAt])
+  @@index([aggregateId])
+}
+
 // ============================================================================
 // DATABASE NOTES & DESIGN DECISIONS
 // ============================================================================
