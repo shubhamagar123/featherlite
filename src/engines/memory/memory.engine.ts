@@ -131,6 +131,14 @@ export class MemoryEngine implements IMemoryOperations, IMemoryEngine {
         throw new Error(`Memory ${memory.id} not found`);
       }
 
+      // Enforce immutability: prevent updates to expired or archived memories
+      if (existing.status === MemoryStatus.EXPIRED) {
+        throw new Error(`Cannot update expired memory ${memory.id}`);
+      }
+      if (existing.status === MemoryStatus.ARCHIVED) {
+        throw new Error(`Cannot update archived memory ${memory.id}`);
+      }
+
       const updated: Memory = {
         ...memory,
         updatedAt: new Date(),
@@ -249,6 +257,13 @@ export class MemoryEngine implements IMemoryOperations, IMemoryEngine {
         throw new Error(`Memory ${memoryId} not found`);
       }
 
+      if (memory.status === MemoryStatus.EXPIRED) {
+        throw new Error(`Memory ${memoryId} is already expired`);
+      }
+      if (memory.status === MemoryStatus.ARCHIVED) {
+        throw new Error(`Cannot expire archived memory ${memoryId}`);
+      }
+
       const expired: Memory = {
         ...memory,
         status: MemoryStatus.EXPIRED,
@@ -268,6 +283,10 @@ export class MemoryEngine implements IMemoryOperations, IMemoryEngine {
       const memory = findResult.isSuccess ? findResult.value : undefined;
       if (!memory) {
         throw new Error(`Memory ${memoryId} not found`);
+      }
+
+      if (memory.status === MemoryStatus.ARCHIVED) {
+        throw new Error(`Memory ${memoryId} is already archived`);
       }
 
       const archived: Memory = {
