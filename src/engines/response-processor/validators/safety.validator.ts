@@ -1,5 +1,6 @@
 import { IResult, Result } from '@services/types/result.type';
 import { IResponseValidator } from '../interfaces/response-processor.interfaces';
+import { IModerationValidator } from '../interfaces/moderation.interface';
 import {
   ParsedResponse,
   ResponseValidationIssue,
@@ -73,12 +74,18 @@ const SAFETY_PATTERNS: SafetyPattern[] = [
 ];
 
 export class SafetyValidator implements IResponseValidator {
+  // Note: moderationValidator can be injected for future async moderation checks
+  constructor(moderationValidator?: IModerationValidator) {
+    void moderationValidator;
+  }
+
   validate(parsed: ParsedResponse, _ctx: ResponseProcessingContext): IResult<ResponseValidationOutcome> {
     const rawText = parsed.text ?? '';
     // Normalize Unicode confusables (NFKC maps lookalikes to canonical forms)
     const text = this.normalizeUnicode(rawText);
     const issues: ResponseValidationIssue[] = [];
 
+    // Check regex-based patterns (fast local check)
     for (const p of SAFETY_PATTERNS) {
       const match = text.match(p.pattern);
       if (!match) continue;
