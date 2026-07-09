@@ -2,6 +2,7 @@ import { IEventRegistry } from '../interfaces/event-bus.interface';
 import { IEventHandler } from '../interfaces/event-handler.interface';
 import { EventType } from '../enums/event.enums';
 import { randomUUID } from 'crypto';
+import { IdempotencyMiddleware } from './idempotency-middleware';
 
 interface HandlerEntry {
   handler: IEventHandler;
@@ -11,6 +12,15 @@ interface HandlerEntry {
 
 export class EventRegistry implements IEventRegistry {
   private handlers: Map<EventType, HandlerEntry[]> = new Map();
+  private enableIdempotency: boolean = true;
+
+  constructor(enableIdempotency: boolean = true) {
+    this.enableIdempotency = enableIdempotency;
+  }
+
+  setIdempotency(enabled: boolean): void {
+    this.enableIdempotency = enabled;
+  }
 
   register(eventType: EventType, handler: IEventHandler, priority: number = 1): string {
     if (!this.handlers.has(eventType)) {
@@ -18,7 +28,8 @@ export class EventRegistry implements IEventRegistry {
     }
 
     const subscriptionId = randomUUID();
-    const entry: HandlerEntry = { handler, priority: Math.max(0, Math.min(10, priority)), subscriptionId };
+    const wrappedHandler = this.enableIdempotency ? new IdempotencyMiddleware(handler) : handler;
+    const entry: HandlerEntry = { handler: wrappedHandler, priority: Math.max(0, Math.min(10, priority)), subscriptionId };
 
     const handlerList = this.handlers.get(eventType)!;
     handlerList.push(entry);
