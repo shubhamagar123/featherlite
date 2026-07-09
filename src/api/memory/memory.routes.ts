@@ -20,23 +20,23 @@ import { logger } from '@utils/logger';
  * GET    /api/v1/memory/search       - Search memories by query
  */
 
-const listMemoriesSchema = z.object({
+const listMemoriesSchema = {
   query: commonSchemas.pagination.extend({
     type: z.enum(['fact', 'event', 'preference', 'relationship']).optional(),
     importance: z.coerce.number().int().min(0).max(10).optional(),
   }),
-});
+};
 
-const createMemorySchema = z.object({
+const createMemorySchema = {
   body: z.object({
     content: z.string().min(1).max(5000),
     type: z.enum(['fact', 'event', 'preference', 'relationship']),
     importance: z.number().int().min(0).max(10).default(5),
     metadata: z.record(z.unknown()).optional(),
   }),
-});
+};
 
-const updateMemorySchema = z.object({
+const updateMemorySchema = {
   params: z.object({
     memoryId: commonSchemas.uuid,
   }),
@@ -45,20 +45,20 @@ const updateMemorySchema = z.object({
     importance: z.number().int().min(0).max(10).optional(),
     metadata: z.record(z.unknown()).optional(),
   }),
-});
+};
 
-const memoryIdSchema = z.object({
+const memoryIdSchema = {
   params: z.object({
     memoryId: commonSchemas.uuid,
   }),
-});
+};
 
-const searchMemoriesSchema = z.object({
+const searchMemoriesSchema = {
   query: commonSchemas.pagination.extend({
     q: z.string().min(1).max(255),
     type: z.enum(['fact', 'event', 'preference', 'relationship']).optional(),
   }),
-});
+};
 
 export async function registerMemoryRoutes(app: Application): Promise<void> {
   const baseRoute = '/api/v1/memory';
@@ -258,7 +258,7 @@ export async function registerMemoryRoutes(app: Application): Promise<void> {
       try {
         // TODO: Full-text search via MemoryService
         // Should search in memory content using database full-text search
-        const results = [];
+        const results: any[] = [];
 
         res.status(200).json(
           paginatedResponse(results, page, limit, 0, String(req.id))

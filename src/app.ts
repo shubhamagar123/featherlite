@@ -8,7 +8,7 @@ import { metricsMiddleware } from '@middleware/metricsMiddleware';
 import { logger } from '@utils/logger';
 import { HealthChecker } from '@infra/health/health-check';
 
-export function createApp(): Application {
+export async function createApp(): Promise<Application> {
   const app = express();
 
   // Trust proxy

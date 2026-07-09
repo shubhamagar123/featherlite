@@ -9,6 +9,7 @@
     "baseUrl": "./src",
     "paths": {
       "@/*": ["./*"],
+      "@api/*": ["./api/*"],
       "@database/*": ["./database/*"],
       "@modules/*": ["./modules/*"],
       "@services/*": ["./services/*"],

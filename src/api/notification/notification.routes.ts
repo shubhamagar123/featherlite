@@ -22,26 +22,26 @@ import { logger } from '@utils/logger';
  * PUT    /api/v1/notification/preferences    - Update notification preferences
  */
 
-const listNotificationsSchema = z.object({
+const listNotificationsSchema = {
   query: commonSchemas.pagination.extend({
     unreadOnly: z.coerce.boolean().optional(),
     type: z.enum(['message', 'activity', 'reminder', 'system']).optional(),
   }),
-});
+};
 
-const notificationIdSchema = z.object({
+const notificationIdSchema = {
   params: z.object({
     notificationId: commonSchemas.uuid,
   }),
-});
+};
 
-const markReadSchema = z.object({
+const markReadSchema = {
   body: z.object({
     notificationIds: z.array(commonSchemas.uuid),
   }),
-});
+};
 
-const updatePreferencesSchema = z.object({
+const updatePreferencesSchema = {
   body: z.object({
     enableNotifications: z.boolean().optional(),
     enableCompanionMessages: z.boolean().optional(),
@@ -52,7 +52,7 @@ const updatePreferencesSchema = z.object({
     quietHoursStart: z.string().regex(/^\d{2}:\d{2}$/).optional(),
     quietHoursEnd: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   }),
-});
+};
 
 export async function registerNotificationRoutes(
   app: Application

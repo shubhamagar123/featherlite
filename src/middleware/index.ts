@@ -19,3 +19,6 @@ export { requestContextMiddleware, setUserContext, getUserContext } from './requ
 // Security
 export { securityHeaders, corsMiddleware, requestIdMiddleware } from './security';
 export { csrfMiddleware, generateCsrfToken, disableCsrf } from './csrf';
+
+// Async Handler (from API module for convenience)
+export { asyncHandler } from '@api/index';

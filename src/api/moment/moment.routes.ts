@@ -24,18 +24,28 @@ import { logger } from '@utils/logger';
  * - Special occasion notifications
  */
 
-const listMomentsSchema = z.object({
+const listMomentsSchema = {
   query: commonSchemas.pagination.extend({
     upcoming: z.coerce.boolean().optional(),
     type: z.enum(['daily', 'event', 'reminder', 'milestone']).optional(),
   }),
-});
+};
 
-const momentIdSchema = z.object({
+const momentIdSchema = {
   params: z.object({
     momentId: commonSchemas.uuid,
   }),
-});
+};
+
+const upcomingMomentsSchema = {
+  query: z.object({
+    days: z.coerce.number().int().positive().max(30).default(7),
+  }),
+};
+
+const completedMomentsSchema = {
+  query: commonSchemas.pagination,
+};
 
 export async function registerMomentRoutes(app: Application): Promise<void> {
   const baseRoute = '/api/v1/moment';
@@ -88,13 +98,7 @@ export async function registerMomentRoutes(app: Application): Promise<void> {
     `${baseRoute}/upcoming`,
     authenticate,
     rateLimiters.api,
-    validate(
-      z.object({
-        query: z.object({
-          days: z.coerce.number().int().positive().max(30).default(7),
-        }),
-      })
-    ),
+    validate(upcomingMomentsSchema),
     asyncHandler(async (req: Request, res: Response) => {
       const userId = req.user!.uid;
       const { days = 7 } = req.query as Record<string, any>;
@@ -193,18 +197,14 @@ export async function registerMomentRoutes(app: Application): Promise<void> {
     `${baseRoute}/completed`,
     authenticate,
     rateLimiters.api,
-    validate(
-      z.object({
-        query: commonSchemas.pagination,
-      })
-    ),
+    validate(completedMomentsSchema),
     asyncHandler(async (req: Request, res: Response) => {
       const userId = req.user!.uid;
       const { page = 1, limit = 20 } = req.query as Record<string, any>;
 
       try {
         // TODO: Query completed moments from MomentRepository
-        const completedMoments = [];
+        const completedMoments: any[] = [];
 
         res.status(200).json(
           paginatedResponse(completedMoments, page, limit, 0, String(req.id))

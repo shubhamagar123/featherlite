@@ -21,13 +21,13 @@ import { logger } from '@utils/logger';
  * POST   /api/v1/companion/:companionId/deactivate - Deactivate companion
  */
 
-const listCompanionsSchema = z.object({
+const listCompanionsSchema = {
   query: commonSchemas.pagination.extend({
     status: z.enum(['active', 'inactive', 'archived']).optional(),
   }),
-});
+};
 
-const createCompanionSchema = z.object({
+const createCompanionSchema = {
   body: z.object({
     name: z.string().min(1).max(255),
     description: z.string().max(1000).optional(),
@@ -35,9 +35,9 @@ const createCompanionSchema = z.object({
     personality: z.record(z.unknown()).optional(),
     config: z.record(z.unknown()).optional(),
   }),
-});
+};
 
-const updateCompanionSchema = z.object({
+const updateCompanionSchema = {
   params: z.object({
     companionId: commonSchemas.uuid,
   }),
@@ -48,13 +48,13 @@ const updateCompanionSchema = z.object({
     personality: z.record(z.unknown()).optional(),
     config: z.record(z.unknown()).optional(),
   }),
-});
+};
 
-const companionIdSchema = z.object({
+const companionIdSchema = {
   params: z.object({
     companionId: commonSchemas.uuid,
   }),
-});
+};
 
 export async function registerCompanionRoutes(app: Application): Promise<void> {
   const baseRoute = '/api/v1/companion';

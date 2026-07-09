@@ -19,20 +19,20 @@ import { logger } from '@utils/logger';
  * DELETE /api/v1/users/me       - Delete user account
  */
 
-const updateProfileSchema = z.object({
+const updateProfileSchema = {
   body: z.object({
     name: z.string().min(1).max(255).optional(),
     avatar: z.string().url().optional(),
     bio: z.string().max(500).optional(),
     preferences: z.record(z.unknown()).optional(),
   }),
-});
+};
 
-const userIdParamSchema = z.object({
+const userIdParamSchema = {
   params: z.object({
     userId: commonSchemas.uuid,
   }),
-});
+};
 
 export async function registerUserRoutes(app: Application): Promise<void> {
   const baseRoute = '/api/v1/users';

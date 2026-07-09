@@ -20,33 +20,33 @@ import { logger } from '@utils/logger';
  * DELETE /api/v1/conversation/:sessionId        - End/delete conversation
  */
 
-const createSessionSchema = z.object({
+const createSessionSchema = {
   body: z.object({
     companionId: commonSchemas.uuid,
     initialMessage: z.string().optional(),
   }),
-});
+};
 
-const sendMessageSchema = z.object({
+const sendMessageSchema = {
   params: z.object({
     sessionId: commonSchemas.uuid,
   }),
   body: z.object({
     message: z.string().min(1).max(5000),
   }),
-});
+};
 
-const sessionIdSchema = z.object({
+const sessionIdSchema = {
   params: z.object({
     sessionId: commonSchemas.uuid,
   }),
-});
+};
 
-const listConversationsSchema = z.object({
+const listConversationsSchema = {
   query: commonSchemas.pagination.extend({
     companionId: commonSchemas.uuid.optional(),
   }),
-});
+};
 
 export async function registerConversationRoutes(app: Application): Promise<void> {
   const baseRoute = '/api/v1/conversation';
@@ -248,7 +248,7 @@ export async function registerConversationRoutes(app: Application): Promise<void
 
       try {
         // TODO: Query ConversationRepository with pagination
-        const conversations = [];
+        const conversations: any[] = [];
 
         res.status(200).json(
           paginatedResponse(conversations, page, limit, 0, String(req.id))

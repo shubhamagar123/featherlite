@@ -17,11 +17,11 @@ import { logger } from '@utils/logger';
  */
 
 // Validation schemas
-const createSessionSchema = z.object({
+const createSessionSchema = {
   body: z.object({
     token: z.string().min(1, 'Firebase ID token required'),
   }),
-});
+};
 
 export async function registerAuthRoutes(app: Application): Promise<void> {
   const baseRoute = '/api/v1/auth';
@@ -36,9 +36,7 @@ export async function registerAuthRoutes(app: Application): Promise<void> {
   app.post(
     `${baseRoute}/session`,
     rateLimiters.auth,
-    validate({
-      body: createSessionSchema.shape.body,
-    }),
+    validate(createSessionSchema),
     asyncHandler(async (req: Request, res: Response) => {
       const { token } = req.body;
 
