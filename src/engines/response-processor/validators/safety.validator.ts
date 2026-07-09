@@ -74,7 +74,9 @@ const SAFETY_PATTERNS: SafetyPattern[] = [
 
 export class SafetyValidator implements IResponseValidator {
   validate(parsed: ParsedResponse, _ctx: ResponseProcessingContext): IResult<ResponseValidationOutcome> {
-    const text = parsed.text ?? '';
+    const rawText = parsed.text ?? '';
+    // Normalize Unicode confusables (NFKC maps lookalikes to canonical forms)
+    const text = this.normalizeUnicode(rawText);
     const issues: ResponseValidationIssue[] = [];
 
     for (const p of SAFETY_PATTERNS) {
@@ -91,5 +93,11 @@ export class SafetyValidator implements IResponseValidator {
 
     const blocking = issues.some((i) => i.severity === ResponseValidationSeverity.BLOCKING);
     return Result.success({ isValid: !blocking, isSafe: !blocking, issues });
+  }
+
+  private normalizeUnicode(text: string): string {
+    // NFKC (Compatibility Decomposition followed by Canonical Composition)
+    // Maps lookalike characters (e.g., Cyrillic а) to ASCII equivalents
+    return text.normalize('NFKC');
   }
 }
