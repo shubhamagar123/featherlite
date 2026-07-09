@@ -12,7 +12,8 @@ import { MemoryQueryBuilder } from '../builders/memory-query-builder';
 import { MemoryRanker } from '../components/memory-ranker';
 import { MemoryFilter } from '../components/memory-filter';
 import { MemoryRetriever } from '../components/memory-retriever';
-import { MemoryQueryCache } from '../cache/memory-query-cache';
+import { RedisMemoryCache } from '@infra/cache/redis-memory-cache.service';
+import { getRedisClient } from '@infra/redis/redis.provider';
 
 export class MemoryQueryFactory implements IMemoryQueryFactory {
   private static instance: MemoryQueryFactory;
@@ -47,7 +48,7 @@ export class MemoryQueryFactory implements IMemoryQueryFactory {
   }
 
   createCache(): IMemoryCache {
-    return new MemoryQueryCache();
+    return new RedisMemoryCache(getRedisClient());
   }
 }
 

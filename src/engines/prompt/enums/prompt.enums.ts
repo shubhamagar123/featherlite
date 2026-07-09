@@ -45,6 +45,12 @@ export enum CompressionLevel {
   AGGRESSIVE = 'AGGRESSIVE',
 }
 
+export enum CompressionStrategy {
+  KEEP_TAIL = 'KEEP_TAIL', // Keep most recent context (default)
+  KEEP_HEAD = 'KEEP_HEAD', // Keep initial context (for JSON extraction)
+  KEEP_BOTH_ENDS = 'KEEP_BOTH_ENDS', // Keep beginning and end, drop middle
+}
+
 export enum PromptStatus {
   BUILDING = 'BUILDING',
   VALIDATING = 'VALIDATING',

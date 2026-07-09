@@ -1,7 +1,7 @@
 import { IResult, Result } from '@services/types/result.type';
 import { IPromptCompressor } from '../interfaces/prompt-compressor.interface';
 import { PromptPayload, CompressionStatistics } from '../dtos/prompt.dtos';
-import { CompressionLevel } from '../enums/prompt.enums';
+import { CompressionLevel, CompressionStrategy, PromptStrategy } from '../enums/prompt.enums';
 import { TokenBudgeter } from '../builders/token-budgeter';
 
 /**
