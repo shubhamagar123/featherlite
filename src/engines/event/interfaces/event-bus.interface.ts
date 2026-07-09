@@ -9,6 +9,11 @@ export interface IEventBus {
     mode?: EventDispatchMode
   ): Promise<IResult<void>>;
 
+  publishBatch<T extends DomainEventPayload = Record<string, any>>(
+    envelopes: EventEnvelope<T>[],
+    mode?: EventDispatchMode
+  ): Promise<IResult<void>>;
+
   subscribe<T extends DomainEventPayload = Record<string, any>>(
     eventType: EventType,
     handler: IEventHandler<T>,
@@ -24,6 +29,11 @@ export interface IEventBus {
 export interface IEventPublisher {
   publish<T extends DomainEventPayload = Record<string, any>>(
     envelope: EventEnvelope<T>,
+    mode?: EventDispatchMode
+  ): Promise<IResult<void>>;
+
+  publishBatch<T extends DomainEventPayload = Record<string, any>>(
+    envelopes: EventEnvelope<T>[],
     mode?: EventDispatchMode
   ): Promise<IResult<void>>;
 }

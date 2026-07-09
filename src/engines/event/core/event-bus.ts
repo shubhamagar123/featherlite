@@ -116,6 +116,53 @@ export class EventBus implements IEventBus {
     });
   }
 
+  async publishBatch<T extends DomainEventPayload>(
+    envelopes: EventEnvelope<T>[],
+    mode: EventDispatchMode = EventDispatchMode.SYNC
+  ): Promise<IResult<void>> {
+    return Result.tryAsync(async () => {
+      if (envelopes.length === 0) {
+        return;
+      }
+
+      const startTime = Date.now();
+      const results: IResult<void>[] = [];
+      const errors: Error[] = [];
+
+      for (const envelope of envelopes) {
+        const result = await this.publish(envelope, mode);
+        results.push(result);
+
+        if (result.isFailure) {
+          errors.push(result.error || new Error('Unknown error'));
+        }
+      }
+
+      if (errors.length > 0) {
+        this.logger.error(
+          {
+            batchSize: envelopes.length,
+            failureCount: errors.length,
+            errors: errors.map(e => e.message),
+          },
+          'Batch publish had failures'
+        );
+
+        throw errors[0];
+      }
+
+      const duration = Date.now() - startTime;
+      this.logger.debug(
+        {
+          batchSize: envelopes.length,
+          durationMs: duration,
+          averagePerEventMs: Math.round(duration / envelopes.length),
+        },
+        'Batch published successfully'
+      );
+    });
+  }
+
   subscribe<T extends DomainEventPayload = Record<string, any>>(
     eventType: EventType,
     handler: IEventHandler<T>,

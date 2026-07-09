@@ -25,6 +25,13 @@ export class EventEngine implements IEventPublisher, IEventSubscriber {
     return this.bus.publish(envelope, mode);
   }
 
+  async publishBatch<T extends DomainEventPayload = Record<string, any>>(
+    envelopes: EventEnvelope<T>[],
+    mode: EventDispatchMode = EventDispatchMode.SYNC
+  ): Promise<IResult<void>> {
+    return this.bus.publishBatch(envelopes, mode);
+  }
+
   subscribe<T extends DomainEventPayload = Record<string, any>>(
     eventType: EventType,
     handler: IEventHandler<T>,
