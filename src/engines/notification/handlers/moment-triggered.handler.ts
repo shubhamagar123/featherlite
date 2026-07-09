@@ -24,6 +24,9 @@ interface MomentTriggeredEventPayload {
 /**
  * Consumes MOMENT_TRIGGERED events and schedules matching notifications.
  * Notification kind, template, and channel are chosen from the moment kind.
+ *
+ * Idempotency: Relies on BaseEventHandler's ProcessedEvents table for
+ * exactly-once delivery. No engine-side dedupeKey needed.
  */
 export class MomentTriggeredHandler extends BaseEventHandler<MomentTriggeredEventPayload> {
   constructor(private readonly engine: INotificationEngine) {
@@ -53,7 +56,6 @@ export class MomentTriggeredHandler extends BaseEventHandler<MomentTriggeredEven
         COMPANION_NAME: '',
         ...(p.data ?? {}),
       },
-      dedupeKey: `moment:${p.momentId}`,
     });
   }
 

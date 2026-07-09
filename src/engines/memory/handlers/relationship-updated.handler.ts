@@ -12,6 +12,12 @@ interface RelationshipUpdatedPayload {
   health?: number;
 }
 
+/**
+ * Consumes RELATIONSHIP_UPDATED events and creates corresponding memory records.
+ *
+ * Idempotency: Relies on BaseEventHandler's ProcessedEvents table for
+ * exactly-once delivery. Each handler invocation is recorded atomically.
+ */
 export class RelationshipUpdatedHandler extends BaseEventHandler<RelationshipUpdatedPayload> {
   constructor(private readonly memoryEngine: IMemoryOperations) {
     super(EventType.RELATIONSHIP_UPDATED, 5, true);

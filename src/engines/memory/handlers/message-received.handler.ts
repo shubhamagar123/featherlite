@@ -10,6 +10,13 @@ interface MessageReceivedPayload {
   content?: string;
 }
 
+/**
+ * Consumes MESSAGE_RECEIVED events and creates memory records for emotionally
+ * significant or personally identifiable content.
+ *
+ * Idempotency: Relies on BaseEventHandler's ProcessedEvents table for
+ * exactly-once delivery. Each handler invocation is recorded atomically.
+ */
 export class MessageReceivedHandler extends BaseEventHandler<MessageReceivedPayload> {
   constructor(private readonly memoryEngine: IMemoryOperations) {
     super(EventType.MESSAGE_RECEIVED, 4, true);

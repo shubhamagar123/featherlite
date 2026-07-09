@@ -10,6 +10,13 @@ interface InteractionEndedPayload {
   conversationSummary?: string;
 }
 
+/**
+ * Consumes INTERACTION_ENDED events and creates memory records from
+ * conversation summaries.
+ *
+ * Idempotency: Relies on BaseEventHandler's ProcessedEvents table for
+ * exactly-once delivery. Each handler invocation is recorded atomically.
+ */
 export class InteractionEndedHandler extends BaseEventHandler<InteractionEndedPayload> {
   constructor(private readonly memoryEngine: IMemoryOperations) {
     super(EventType.INTERACTION_ENDED, 5, true);

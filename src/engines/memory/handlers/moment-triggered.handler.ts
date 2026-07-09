@@ -12,6 +12,12 @@ interface MomentTriggeredPayload {
   significance?: number | string;
 }
 
+/**
+ * Consumes MOMENT_TRIGGERED events and creates corresponding memory records.
+ *
+ * Idempotency: Relies on BaseEventHandler's ProcessedEvents table for
+ * exactly-once delivery. Each handler invocation is recorded atomically.
+ */
 export class MomentTriggeredHandler extends BaseEventHandler<MomentTriggeredPayload> {
   constructor(private readonly memoryEngine: IMemoryOperations) {
     super(EventType.MOMENT_TRIGGERED, 6, true);

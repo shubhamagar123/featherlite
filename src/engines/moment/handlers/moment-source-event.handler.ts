@@ -7,6 +7,9 @@ import { IMomentEngine } from '../interfaces/moment.interfaces';
  * Bridges the shared event bus to the Moment Engine. Subscribed to memory,
  * relationship, message, and conversation lifecycle events; each triggers a
  * fresh evaluation on the engine.
+ *
+ * Idempotency: Relies on BaseEventHandler's ProcessedEvents table for
+ * exactly-once delivery. Each handler invocation is recorded atomically.
  */
 export class MomentSourceEventHandler extends BaseEventHandler<DomainEventPayload> {
   constructor(private readonly engine: IMomentEngine, eventType: EventType) {
