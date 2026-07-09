@@ -17,6 +17,7 @@ import {
   LLMFinishReason,
   LLMProviderStatus,
 } from '../enums/llm-gateway.enums';
+import { ProviderCircuitBreaker } from '../circuit-breaker/provider-circuit-breaker';
 
 /**
  * Provider-side transport contract. Concrete providers inject a transport
@@ -45,6 +46,7 @@ export abstract class BaseLLMProvider implements ILLMProvider {
   protected recentLatencies: number[] = [];
   protected recentErrors: number = 0;
   protected recentAttempts: number = 0;
+  private circuitBreaker: ProviderCircuitBreaker | null = null;
 
   abstract readonly type: LLMProviderType;
 
@@ -55,7 +57,28 @@ export abstract class BaseLLMProvider implements ILLMProvider {
     this.logger = createLogger(`LLMProvider:${this.constructor.name}`);
   }
 
+  private getCircuitBreaker(): ProviderCircuitBreaker {
+    if (!this.circuitBreaker) {
+      this.circuitBreaker = new ProviderCircuitBreaker(
+        this.type,
+        5, // failureThreshold
+        30_000, // resetTimeoutMs (30 seconds)
+        2 // successThreshold
+      );
+    }
+    return this.circuitBreaker;
+  }
+
   async complete(request: LLMRequest): Promise<IResult<LLMResponse>> {
+    // Check circuit breaker availability
+    if (!this.getCircuitBreaker().isAvailable()) {
+      const err = new Error(
+        `Provider ${this.type} is unavailable (circuit breaker OPEN)`
+      );
+      this.logger.warn({ provider: this.type, requestId: request.requestId }, err.message);
+      return Result.failure(err);
+    }
+
     const startedAt = Date.now();
     this.recentAttempts++;
 
@@ -69,6 +92,7 @@ export abstract class BaseLLMProvider implements ILLMProvider {
       const latencyMs = Date.now() - startedAt;
       this.trackLatency(latencyMs);
       this.consecutiveFailures = 0;
+      this.getCircuitBreaker().recordSuccess();
 
       const usage: LLMTokenUsage = {
         promptTokens: providerResponse.promptTokens,
@@ -98,6 +122,7 @@ export abstract class BaseLLMProvider implements ILLMProvider {
     } catch (error) {
       this.consecutiveFailures++;
       this.recentErrors++;
+      this.getCircuitBreaker().recordFailure();
       const err = error instanceof Error ? error : new Error(String(error));
       this.logger.warn(
         { provider: this.type, requestId: request.requestId, error: err.message },
@@ -108,6 +133,15 @@ export abstract class BaseLLMProvider implements ILLMProvider {
   }
 
   async *stream(request: LLMRequest): AsyncIterable<LLMStreamChunk> {
+    // Check circuit breaker availability
+    if (!this.getCircuitBreaker().isAvailable()) {
+      const err = new Error(
+        `Provider ${this.type} is unavailable (circuit breaker OPEN)`
+      );
+      this.logger.warn({ provider: this.type, requestId: request.requestId }, err.message);
+      throw err;
+    }
+
     if (!this.transport.invokeStream) {
       throw new Error(`Provider ${this.type} does not support streaming`);
     }
@@ -124,10 +158,15 @@ export abstract class BaseLLMProvider implements ILLMProvider {
           finishReason: chunk.finishReason,
           index: index++,
         };
+        // Mark success only when stream completes fully
+        if (chunk.finished) {
+          this.getCircuitBreaker().recordSuccess();
+        }
       }
     } catch (error) {
       this.consecutiveFailures++;
       this.recentErrors++;
+      this.getCircuitBreaker().recordFailure();
       throw error;
     }
   }
@@ -164,7 +203,7 @@ export abstract class BaseLLMProvider implements ILLMProvider {
   }
 
   isAvailable(): boolean {
-    return this.available && this.config.enabled;
+    return this.available && this.config.enabled && this.getCircuitBreaker().isAvailable();
   }
 
   protected computeCost(usage: LLMTokenUsage): LLMCostBreakdown {
