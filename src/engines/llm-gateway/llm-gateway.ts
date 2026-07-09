@@ -17,6 +17,7 @@ import {
   LLMProviderType,
   LLMResponseStatus,
   LLMSelectionStrategy,
+  LLMFinishReason,
 } from './enums/llm-gateway.enums';
 import { ProviderSelectionStrategy } from './strategies/provider-selection.strategy';
 import { RetryStrategy } from './strategies/retry.strategy';
@@ -111,8 +112,41 @@ export class LLMGateway implements ILLMGateway {
       throw selection.error ?? new Error('No provider available');
     }
     const provider = this.providers.get(selection.value)!;
+    const startTime = Date.now();
+    let accumulatedContent = '';
+    let totalTokens = 0;
+
     for await (const chunk of provider.stream(request)) {
+      accumulatedContent += chunk.delta;
       yield chunk;
+
+      if (chunk.finished) {
+        // Emit terminal event when stream completes
+        const response: LLMResponse = {
+          requestId: request.requestId,
+          provider: chunk.provider,
+          model: chunk.model,
+          status: LLMResponseStatus.SUCCESS,
+          content: accumulatedContent,
+          finishReason: chunk.finishReason ?? LLMFinishReason.STOP,
+          usage: {
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens,
+          },
+          cost: {
+            promptCostUsd: 0,
+            completionCostUsd: 0,
+            totalCostUsd: 0,
+          },
+          latencyMs: Date.now() - startTime,
+          cached: false,
+          attempt: 1,
+          fallbacksUsed: [],
+          createdAt: new Date(),
+        };
+        await this.publishResponseEvent(request, response);
+      }
     }
   }
 
