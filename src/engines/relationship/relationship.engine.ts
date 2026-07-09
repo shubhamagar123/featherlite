@@ -49,9 +49,9 @@ import {
   EventContextBuilder,
   RelationshipCreatedEvent,
   RelationshipUpdatedEvent,
-  RelationshipDimensionChangedEvent,
   EventDispatchMode,
 } from '@engines/event';
+import { RelationshipDimensionsBatchChangedEvent } from '@engines/event/events/relationship-dimensions-batch-changed.event';
 
 export interface RelationshipEngineDeps {
   relationshipService: IRelationshipService;
@@ -491,6 +491,7 @@ export class RelationshipEngine implements IRelationshipEngine {
       .withCompanionId(companionId)
       .build();
 
+    const changes = [];
     for (const dimensionType of ALL_DIMENSIONS) {
       const prevDim = previousSnapshot.dimensions[dimensionType];
       const currDim = currentSnapshot.dimensions[dimensionType];
@@ -498,22 +499,28 @@ export class RelationshipEngine implements IRelationshipEngine {
       if (!prevDim || !currDim) continue;
       if (this.roundScore(prevDim.value) === this.roundScore(currDim.value)) continue;
 
-      const changeEvent = new RelationshipDimensionChangedEvent(
-        relationshipId,
-        {
-          userId,
-          companionId,
-          dimension: dimensionType,
-          oldValue: prevDim.value,
-          newValue: currDim.value,
-          change: currDim.value - prevDim.value,
-          reason: currDim.changeHistory[currDim.changeHistory.length - 1]?.reason ?? 'event-derived',
-        },
-        context
-      );
-
-      await this.eventEngine.publish(changeEvent.getEnvelope(), EventDispatchMode.ASYNC);
+      changes.push({
+        dimension: dimensionType,
+        oldValue: prevDim.value,
+        newValue: currDim.value,
+        change: currDim.value - prevDim.value,
+        reason: currDim.changeHistory[currDim.changeHistory.length - 1]?.reason ?? 'event-derived',
+      });
     }
+
+    if (changes.length === 0) return;
+
+    const batchEvent = new RelationshipDimensionsBatchChangedEvent(
+      relationshipId,
+      {
+        userId,
+        companionId,
+        changes,
+      },
+      context
+    );
+
+    await this.eventEngine.publish(batchEvent.getEnvelope(), EventDispatchMode.ASYNC);
   }
 
   private async publishRelationshipUpdate(

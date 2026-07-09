@@ -60,6 +60,11 @@ export { EventBus } from './core/event-bus';
 export { EventRegistry } from './core/event-registry';
 export { EventDispatcher } from './core/event-dispatcher';
 export { BullMQDispatcher } from './core/bullmq-dispatcher';
+export {
+  RelationshipDimensionsBatchChangedEvent,
+  type RelationshipDimensionsBatchChangedPayload,
+  type DimensionChange,
+} from './events/relationship-dimensions-batch-changed.event';
 export * from './dto/event.dto';
 export * from './enums/event.enums';
 export * from './events/index';
