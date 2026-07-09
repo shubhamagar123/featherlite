@@ -15,28 +15,28 @@ export function errorHandlerApplicationMiddleware(
   res: Response,
   _next: NextFunction
 ): void {
-  const traceId = req.id || `trace_${Date.now()}`;
+  const traceId = String(req.id || `trace_${Date.now()}`);
 
   // Application exceptions
   if (error instanceof ApplicationException) {
     logger.warn(
       {
-        code: error.code,
-        statusCode: error.statusCode,
+        code: (error as any).code,
+        statusCode: (error as any).statusCode,
         traceId,
         path: req.path,
       },
       'Application exception'
     );
 
-    res.status(error.statusCode).json(
-      ResponseBuilder.error(error.code, error.message, traceId, error.details)
+    res.status((error as any).statusCode).json(
+      ResponseBuilder.error((error as any).code, error.message, traceId, (error as any).details)
     );
     return;
   }
 
   // Validation errors from JSON parsing
-  if (error instanceof SyntaxError && 'status' in error && error.status === 400) {
+  if (error instanceof SyntaxError && 'status' in error && (error as any).status === 400) {
     logger.warn({ traceId, path: req.path }, 'JSON parse error');
 
     res.status(400).json(
@@ -47,7 +47,10 @@ export function errorHandlerApplicationMiddleware(
 
   // Generic errors
   const message = error instanceof Error ? error.message : 'Internal server error';
-  const statusCode = 'status' in error && typeof error.status === 'number' ? error.status : 500;
+  const statusCode =
+    typeof error === 'object' && error !== null && 'status' in error && typeof (error as any).status === 'number'
+      ? (error as any).status
+      : 500;
 
   logger.error(
     {
@@ -78,7 +81,7 @@ export function notFoundHandlerApplicationMiddleware(
   res: Response,
   _next: NextFunction
 ): void {
-  const traceId = req.id || `trace_${Date.now()}`;
+  const traceId = String(req.id || `trace_${Date.now()}`);
 
   logger.debug({ traceId, path: req.path, method: req.method }, '404 Not Found');
 

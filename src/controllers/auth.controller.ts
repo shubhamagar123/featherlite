@@ -8,7 +8,6 @@ import {
   validate,
 } from '@application/validators/application.validators';
 import { asyncHandler } from '@api/index';
-import { authenticate } from '@middleware/index';
 
 /**
  * Auth Controller
@@ -27,18 +26,19 @@ export class AuthController extends ControllerBase {
    * POST /api/v1/auth/session
    * Create session from Firebase token
    */
-  createSession = asyncHandler(async (req: Request, res: Response) => {
+  createSession = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const traceId = this.getTraceId(req);
     this.logRequest('POST', '/api/v1/auth/session', { traceId });
 
     try {
-      // 1. VALIDATE input
-      const { token } = validate(req.body, firebaseTokenSchema);
+      // 1. VALIDATE input (validates token exists and is valid)
+      validate<{ token: string }>(req.body, firebaseTokenSchema);
 
       // 2. Get user context
       const user = (req.user as any);
       if (!user) {
-        return this.error(res, new Error('UNAUTHENTICATED'), traceId);
+        this.error(res, new Error('UNAUTHENTICATED'), traceId);
+        return;
       }
 
       const context: ApplicationContext = {
@@ -51,9 +51,10 @@ export class AuthController extends ControllerBase {
       };
 
       // 3. CALL service (business logic is here)
-      const authToken = await this.authService.createSession(context, token);
+      const authToken = await this.authService.createSession(context);
 
       // 4. RETURN response
+      // token variable is validated above, used only to verify it exists
       this.success(res, authToken, traceId, 201);
     } catch (error) {
       this.logRequestError('POST', '/api/v1/auth/session', error, { traceId });
@@ -65,14 +66,15 @@ export class AuthController extends ControllerBase {
    * POST /api/v1/auth/logout
    * End session (requires authentication)
    */
-  logout = asyncHandler(async (req: Request, res: Response) => {
+  logout = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const traceId = this.getTraceId(req);
     this.logRequest('POST', '/api/v1/auth/logout', { traceId });
 
     try {
       const user = (req.user as any);
       if (!user) {
-        return this.error(res, new Error('UNAUTHENTICATED'), traceId);
+        this.error(res, new Error('UNAUTHENTICATED'), traceId);
+        return;
       }
 
       const context: ApplicationContext = {
@@ -98,14 +100,15 @@ export class AuthController extends ControllerBase {
    * GET /api/v1/auth/me
    * Get current user profile (requires authentication)
    */
-  getCurrentUser = asyncHandler(async (req: Request, res: Response) => {
+  getCurrentUser = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const traceId = this.getTraceId(req);
     this.logRequest('GET', '/api/v1/auth/me', { traceId });
 
     try {
       const user = (req.user as any);
       if (!user) {
-        return this.error(res, new Error('UNAUTHENTICATED'), traceId);
+        this.error(res, new Error('UNAUTHENTICATED'), traceId);
+        return;
       }
 
       const context: ApplicationContext = {
@@ -131,16 +134,17 @@ export class AuthController extends ControllerBase {
    * POST /api/v1/auth/refresh
    * Refresh access token
    */
-  refreshToken = asyncHandler(async (req: Request, res: Response) => {
+  refreshToken = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const traceId = this.getTraceId(req);
     this.logRequest('POST', '/api/v1/auth/refresh', { traceId });
 
     try {
-      const { refreshToken } = validate(req.body, refreshTokenSchema);
+      const { refreshToken: token } = validate<{ refreshToken: string }>(req.body, refreshTokenSchema);
 
       const user = (req.user as any);
       if (!user) {
-        return this.error(res, new Error('UNAUTHENTICATED'), traceId);
+        this.error(res, new Error('UNAUTHENTICATED'), traceId);
+        return;
       }
 
       const context: ApplicationContext = {
@@ -153,7 +157,7 @@ export class AuthController extends ControllerBase {
       };
 
       // Call service
-      const newToken = await this.authService.refreshToken(context, refreshToken);
+      const newToken = await this.authService.refreshToken(context, token);
 
       this.success(res, newToken, traceId);
     } catch (error) {

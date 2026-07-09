@@ -56,7 +56,7 @@ export interface AuthTokenDto {
 
 export interface AuthUserDto extends IdDto, EmailDto {
   uid: string;
-  emailVerified: boolean;
+  emailVerified?: boolean;
   roles: string[];
   customClaims?: Record<string, unknown>;
 }

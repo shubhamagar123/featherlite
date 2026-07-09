@@ -10,8 +10,11 @@
     "paths": {
       "@/*": ["./*"],
       "@api/*": ["./api/*"],
+      "@application/*": ["./application/*"],
+      "@controllers/*": ["./controllers/*"],
       "@database/*": ["./database/*"],
       "@modules/*": ["./modules/*"],
+      "@routes/*": ["./routes/*"],
       "@services/*": ["./services/*"],
       "@engines/*": ["./engines/*"],
       "@middleware/*": ["./middleware/*"],

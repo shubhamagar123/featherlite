@@ -37,9 +37,7 @@ export class HealthController extends ControllerBase {
    * GET /health/live
    * Liveness probe for Kubernetes
    */
-  liveness = asyncHandler(async (req: Request, res: Response) => {
-    const traceId = this.getTraceId(req);
-
+  liveness = asyncHandler(async (_req: Request, res: Response) => {
     try {
       const alive = await this.healthService.liveness();
       res.status(alive ? 200 : 503).json({ status: alive ? 'UP' : 'DOWN' });
@@ -52,9 +50,7 @@ export class HealthController extends ControllerBase {
    * GET /health/ready
    * Readiness probe for Kubernetes
    */
-  readiness = asyncHandler(async (req: Request, res: Response) => {
-    const traceId = this.getTraceId(req);
-
+  readiness = asyncHandler(async (_req: Request, res: Response) => {
     try {
       const ready = await this.healthService.readiness();
       res.status(ready ? 200 : 503).json({ status: ready ? 'READY' : 'NOT_READY' });

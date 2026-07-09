@@ -42,7 +42,7 @@ export abstract class ApplicationServiceBase {
     if (!result.isSuccess) {
       throw result.error || new Error('Operation failed');
     }
-    return result.value;
+    return result.value as T;
   }
 
   /**

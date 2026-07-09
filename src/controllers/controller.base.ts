@@ -20,7 +20,7 @@ export abstract class ControllerBase {
    * Get trace ID from request
    */
   protected getTraceId(req: Request): string {
-    return req.id || req.get('x-trace-id') || `trace_${Date.now()}`;
+    return String(req.id || req.get('x-trace-id') || `trace_${Date.now()}`);
   }
 
   /**

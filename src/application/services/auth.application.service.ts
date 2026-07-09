@@ -5,7 +5,6 @@ import {
   AuthUserDto,
 } from '../dtos/application.dtos';
 import {
-  AuthenticationException,
   InvalidTokenException,
   ResourceNotFoundException,
 } from '../exceptions/application.exceptions';
@@ -33,7 +32,7 @@ export class AuthApplicationService extends ApplicationServiceBase {
    * Exchange Firebase ID token for application token
    * Use Case: User logs in with Firebase token
    */
-  async createSession(context: ApplicationContext, firebaseToken: string): Promise<AuthTokenDto> {
+  async createSession(context: ApplicationContext): Promise<AuthTokenDto> {
     this.logStart('createSession', { userId: context.userId });
 
     try {
@@ -145,9 +144,8 @@ export class AuthApplicationService extends ApplicationServiceBase {
 
       return {
         id: user.id,
-        uid: user.firebaseUid,
+        uid: user.firebaseUid || '',
         email: user.email,
-        emailVerified: user.emailVerified,
         roles: context.userRoles,
         customClaims: {
           roles: context.userRoles,
