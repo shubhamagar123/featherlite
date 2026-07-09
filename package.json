@@ -24,6 +24,7 @@
     "health-check": "node scripts/health-check.js"
   },
   "dependencies": {
+    "@aws-sdk/client-eventbridge": "^3.1083.0",
     "@opentelemetry/auto-instrumentations-node": "^0.78.0",
     "@opentelemetry/exporter-metrics-otlp-http": "^0.220.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.220.0",
@@ -35,6 +36,7 @@
     "@opentelemetry/sdk-trace-node": "^2.9.0",
     "@opentelemetry/semantic-conventions": "^1.42.0",
     "@prisma/client": "^5.7.0",
+    "amqplib": "^2.0.1",
     "aws-sdk": "^2.1558.0",
     "bullmq": "^5.7.0",
     "cors": "^2.8.5",
@@ -44,6 +46,7 @@
     "helmet": "^7.1.0",
     "ioredis": "^5.3.2",
     "js-tiktoken": "^1.0.21",
+    "kafkajs": "^2.2.4",
     "lodash-es": "^4.17.21",
     "lru-cache": "^10.1.0",
     "pg": "^8.11.3",
