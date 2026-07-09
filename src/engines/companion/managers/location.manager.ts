@@ -10,43 +10,46 @@
 import { Result, IResult } from '@services/types/result.type';
 import { Weather, type WeightedOption } from '@engines/shared';
 import { CompanionLocation, CompanionState } from '../enums/companion.enums';
-import { ILocationInput, ILocationManager, ICompanionRules } from '../interfaces/managers.interface';
+import { ILocationInput, ILocationManager, ICompanionRules, ILocationWeights } from '../interfaces/managers.interface';
 import { DefaultCompanionRules } from '../rules/companion.rules';
 
-const STATE_LOCATIONS: Record<CompanionState, Partial<Record<CompanionLocation, number>>> = {
-  [CompanionState.COOKING]: { [CompanionLocation.KITCHEN]: 100 },
-  [CompanionState.WORKING]: { [CompanionLocation.STUDY]: 65, [CompanionLocation.CAFE]: 25 },
-  [CompanionState.READING]: {
-    [CompanionLocation.STUDY]: 35,
-    [CompanionLocation.LIVING_ROOM]: 30,
-    [CompanionLocation.BALCONY]: 20,
-    [CompanionLocation.GARDEN]: 15,
+const DEFAULT_LOCATION_WEIGHTS: ILocationWeights = {
+  stateWeights: {
+    [CompanionState.COOKING]: { [CompanionLocation.KITCHEN]: 100 },
+    [CompanionState.WORKING]: { [CompanionLocation.STUDY]: 65, [CompanionLocation.CAFE]: 25 },
+    [CompanionState.READING]: {
+      [CompanionLocation.STUDY]: 35,
+      [CompanionLocation.LIVING_ROOM]: 30,
+      [CompanionLocation.BALCONY]: 20,
+      [CompanionLocation.GARDEN]: 15,
+    },
+    [CompanionState.RELAXING]: {
+      [CompanionLocation.LIVING_ROOM]: 35,
+      [CompanionLocation.BALCONY]: 25,
+      [CompanionLocation.POOL]: 20,
+      [CompanionLocation.GARDEN]: 20,
+    },
+    [CompanionState.GAMING]: { [CompanionLocation.LIVING_ROOM]: 60, [CompanionLocation.STUDY]: 40 },
+    [CompanionState.WALKING]: {
+      [CompanionLocation.GARDEN]: 45,
+      [CompanionLocation.GYM]: 35,
+      [CompanionLocation.CAFE]: 20,
+    },
+    [CompanionState.DRIVING]: { [CompanionLocation.CAFE]: 100 },
+    [CompanionState.SLEEPING]: { [CompanionLocation.LIVING_ROOM]: 100 },
+    [CompanionState.BUSY]: {
+      [CompanionLocation.STUDY]: 40,
+      [CompanionLocation.KITCHEN]: 30,
+      [CompanionLocation.LIVING_ROOM]: 30,
+    },
+    [CompanionState.IDLE]: {
+      [CompanionLocation.LIVING_ROOM]: 40,
+      [CompanionLocation.BALCONY]: 25,
+      [CompanionLocation.KITCHEN]: 20,
+      [CompanionLocation.GARDEN]: 15,
+    },
   },
-  [CompanionState.RELAXING]: {
-    [CompanionLocation.LIVING_ROOM]: 35,
-    [CompanionLocation.BALCONY]: 25,
-    [CompanionLocation.POOL]: 20,
-    [CompanionLocation.GARDEN]: 20,
-  },
-  [CompanionState.GAMING]: { [CompanionLocation.LIVING_ROOM]: 60, [CompanionLocation.STUDY]: 40 },
-  [CompanionState.WALKING]: {
-    [CompanionLocation.GARDEN]: 45,
-    [CompanionLocation.GYM]: 35,
-    [CompanionLocation.CAFE]: 20,
-  },
-  [CompanionState.DRIVING]: { [CompanionLocation.CAFE]: 100 },
-  [CompanionState.SLEEPING]: { [CompanionLocation.LIVING_ROOM]: 100 },
-  [CompanionState.BUSY]: {
-    [CompanionLocation.STUDY]: 40,
-    [CompanionLocation.KITCHEN]: 30,
-    [CompanionLocation.LIVING_ROOM]: 30,
-  },
-  [CompanionState.IDLE]: {
-    [CompanionLocation.LIVING_ROOM]: 40,
-    [CompanionLocation.BALCONY]: 25,
-    [CompanionLocation.KITCHEN]: 20,
-    [CompanionLocation.GARDEN]: 15,
-  },
+  worldSyncBoost: 40,
 };
 
 /** Open-air locations suppressed by confining weather. */
@@ -57,17 +60,20 @@ const OUTDOOR = new Set<CompanionLocation>([
 ]);
 
 export class LocationManager implements ILocationManager {
-  constructor(private readonly rules: ICompanionRules = new DefaultCompanionRules()) {}
+  constructor(
+    private readonly rules: ICompanionRules = new DefaultCompanionRules(),
+    private readonly weights: ILocationWeights = DEFAULT_LOCATION_WEIGHTS
+  ) {}
 
   resolve(input: ILocationInput): IResult<CompanionLocation> {
     const { context, state } = input;
-    const base = { ...STATE_LOCATIONS[state] };
+    const base = { ...this.weights.stateWeights[state] };
 
     // Synchronize with the world: boost the location the world scene maps to,
     // if it is a plausible spot for this state.
     const worldLocation = this.rules.mapWorldSceneToLocation(context.world.scene);
     if (base[worldLocation] !== undefined) {
-      base[worldLocation]! += 40;
+      base[worldLocation]! += this.weights.worldSyncBoost ?? 40;
     }
 
     const confining = this.rules.isConfiningWeather(context.world.weather as Weather);

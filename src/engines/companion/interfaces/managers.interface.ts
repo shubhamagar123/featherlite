@@ -75,6 +75,40 @@ export interface IAvailabilityManager {
 }
 
 /**
+ * Gesture weight rules — configurable weights for gesture selection.
+ */
+export interface IGestureWeights {
+  stateWeights: Record<CompanionState, Partial<Record<Gesture, number>>>;
+  locationNudges?: {
+    outside?: number;
+    gym?: number;
+    coffee?: number;
+  };
+  timeNudges?: {
+    morningCoffee?: number;
+  };
+}
+
+/**
+ * Location weight rules — configurable weights for location selection.
+ */
+export interface ILocationWeights {
+  stateWeights: Record<CompanionState, Partial<Record<CompanionLocation, number>>>;
+  worldSyncBoost?: number;
+}
+
+/**
+ * Expression weight rules — configurable weights for expression selection.
+ */
+export interface IExpressionWeights {
+  moodWeights: Record<CompanionMood, Partial<Record<Expression, number>>>;
+  stateNudges?: Partial<Record<CompanionState, Partial<Record<Expression, number>>>>;
+  weatherNudges?: {
+    storm?: number;
+  };
+}
+
+/**
  * CompanionRules — the central, data-driven policy object.
  *
  * It owns the *world synchronization* mappings (world activity -> life state,

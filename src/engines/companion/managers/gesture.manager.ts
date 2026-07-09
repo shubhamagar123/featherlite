@@ -9,27 +9,37 @@
 import { Result, IResult } from '@services/types/result.type';
 import { TimeOfDay, type WeightedOption } from '@engines/shared';
 import { CompanionLocation, CompanionState, Gesture } from '../enums/companion.enums';
-import { IGestureInput, IGestureManager } from '../interfaces/managers.interface';
+import { IGestureInput, IGestureManager, IGestureWeights } from '../interfaces/managers.interface';
 
-const STATE_GESTURES: Record<CompanionState, Partial<Record<Gesture, number>>> = {
-  [CompanionState.WORKING]: { [Gesture.USE_LAPTOP]: 90, [Gesture.SIT]: 10 },
-  [CompanionState.COOKING]: { [Gesture.COOK]: 100 },
-  [CompanionState.READING]: { [Gesture.READ]: 100 },
-  [CompanionState.RELAXING]: {
-    [Gesture.SIT]: 40,
-    [Gesture.LOOK_OUTSIDE]: 35,
-    [Gesture.STRETCH]: 25,
+const DEFAULT_GESTURE_WEIGHTS: IGestureWeights = {
+  stateWeights: {
+    [CompanionState.WORKING]: { [Gesture.USE_LAPTOP]: 90, [Gesture.SIT]: 10 },
+    [CompanionState.COOKING]: { [Gesture.COOK]: 100 },
+    [CompanionState.READING]: { [Gesture.READ]: 100 },
+    [CompanionState.RELAXING]: {
+      [Gesture.SIT]: 40,
+      [Gesture.LOOK_OUTSIDE]: 35,
+      [Gesture.STRETCH]: 25,
+    },
+    [CompanionState.GAMING]: { [Gesture.SIT]: 70, [Gesture.USE_LAPTOP]: 30 },
+    [CompanionState.WALKING]: { [Gesture.WALK]: 100 },
+    [CompanionState.DRIVING]: { [Gesture.SIT]: 100 },
+    [CompanionState.SLEEPING]: { [Gesture.SIT]: 100 },
+    [CompanionState.BUSY]: { [Gesture.STAND]: 40, [Gesture.USE_LAPTOP]: 30, [Gesture.STRETCH]: 30 },
+    [CompanionState.IDLE]: {
+      [Gesture.STAND]: 30,
+      [Gesture.STRETCH]: 25,
+      [Gesture.LOOK_OUTSIDE]: 25,
+      [Gesture.WAVE]: 20,
+    },
   },
-  [CompanionState.GAMING]: { [Gesture.SIT]: 70, [Gesture.USE_LAPTOP]: 30 },
-  [CompanionState.WALKING]: { [Gesture.WALK]: 100 },
-  [CompanionState.DRIVING]: { [Gesture.SIT]: 100 },
-  [CompanionState.SLEEPING]: { [Gesture.SIT]: 100 },
-  [CompanionState.BUSY]: { [Gesture.STAND]: 40, [Gesture.USE_LAPTOP]: 30, [Gesture.STRETCH]: 30 },
-  [CompanionState.IDLE]: {
-    [Gesture.STAND]: 30,
-    [Gesture.STRETCH]: 25,
-    [Gesture.LOOK_OUTSIDE]: 25,
-    [Gesture.WAVE]: 20,
+  locationNudges: {
+    outside: 25,
+    gym: 30,
+    coffee: 25,
+  },
+  timeNudges: {
+    morningCoffee: 15,
   },
 };
 
@@ -40,35 +50,32 @@ const LEISURELY = new Set<CompanionState>([
 ]);
 
 export class GestureManager implements IGestureManager {
+  constructor(private readonly weights: IGestureWeights = DEFAULT_GESTURE_WEIGHTS) {}
+
   resolve(input: IGestureInput): IResult<Gesture> {
     const { context, state, location } = input;
-    const weights: Partial<Record<Gesture, number>> = { ...STATE_GESTURES[state] };
+    const baseWeights = this.weights.stateWeights[state] ?? {};
+    const weights: Partial<Record<Gesture, number>> = { ...baseWeights };
     const add = (gesture: Gesture, amount: number): void => {
       weights[gesture] = (weights[gesture] ?? 0) + amount;
     };
 
     // Location nudges.
-    if (
-      (location === CompanionLocation.BALCONY || location === CompanionLocation.GARDEN) &&
-      LEISURELY.has(state)
-    ) {
-      add(Gesture.LOOK_OUTSIDE, 25);
+    const outdoorLocations = [CompanionLocation.BALCONY, CompanionLocation.GARDEN];
+    if (outdoorLocations.includes(location) && LEISURELY.has(state)) {
+      add(Gesture.LOOK_OUTSIDE, this.weights.locationNudges?.outside ?? 25);
     }
     if (location === CompanionLocation.GYM) {
-      add(Gesture.STRETCH, 30);
+      add(Gesture.STRETCH, this.weights.locationNudges?.gym ?? 30);
     }
-    if (
-      (location === CompanionLocation.KITCHEN ||
-        location === CompanionLocation.CAFE ||
-        location === CompanionLocation.BALCONY) &&
-      LEISURELY.has(state)
-    ) {
-      add(Gesture.DRINK_COFFEE, 25);
+    const coffeeLocations = [CompanionLocation.KITCHEN, CompanionLocation.CAFE, CompanionLocation.BALCONY];
+    if (coffeeLocations.includes(location) && LEISURELY.has(state)) {
+      add(Gesture.DRINK_COFFEE, this.weights.locationNudges?.coffee ?? 25);
     }
 
     // A leisurely morning invites coffee.
     if (context.timeOfDay === TimeOfDay.MORNING && LEISURELY.has(state)) {
-      add(Gesture.DRINK_COFFEE, 15);
+      add(Gesture.DRINK_COFFEE, this.weights.timeNudges?.morningCoffee ?? 15);
     }
 
     const options: WeightedOption<Gesture>[] = (Object.keys(weights) as Gesture[]).map((g) => ({
