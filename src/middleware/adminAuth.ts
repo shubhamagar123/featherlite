@@ -34,18 +34,18 @@ export async function adminAuth(
 
     if (!authHeader) {
       throw new AppError(
+        401,
         ErrorCode.UNAUTHENTICATED,
-        'Missing Authorization header',
-        401
+        'Missing Authorization header'
       );
     }
 
     const parts = authHeader.split(' ');
     if (parts.length !== 2 || parts[0] !== 'Bearer') {
       throw new AppError(
+        401,
         ErrorCode.UNAUTHENTICATED,
-        'Invalid Authorization header format',
-        401
+        'Invalid Authorization header format'
       );
     }
 
@@ -61,9 +61,9 @@ export async function adminAuth(
       // Validate required fields
       if (!decoded.service || !decoded.role) {
         throw new AppError(
+          401,
           ErrorCode.INVALID_TOKEN,
-          'Invalid token payload',
-          401
+          'Invalid token payload'
         );
       }
 
@@ -82,16 +82,16 @@ export async function adminAuth(
     } catch (error) {
       if (error instanceof jwt.JsonWebTokenError) {
         throw new AppError(
+          401,
           ErrorCode.INVALID_TOKEN,
-          'Invalid or expired admin token',
-          401
+          'Invalid or expired admin token'
         );
       }
       if (error instanceof jwt.TokenExpiredError) {
         throw new AppError(
+          401,
           ErrorCode.TOKEN_EXPIRED,
-          'Admin token has expired',
-          401
+          'Admin token has expired'
         );
       }
       throw error;
@@ -103,9 +103,9 @@ export async function adminAuth(
 
     logger.error({ error }, 'Admin authentication error');
     throw new AppError(
+      500,
       ErrorCode.INTERNAL_SERVER_ERROR,
-      'Authentication failed',
-      500
+      'Authentication failed'
     );
   }
 }

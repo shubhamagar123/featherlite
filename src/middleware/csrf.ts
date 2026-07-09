@@ -65,9 +65,9 @@ export function csrfMiddleware(
       );
 
       throw new AppError(
+        403,
         ErrorCode.FORBIDDEN,
-        'CSRF token missing or invalid',
-        403
+        'CSRF token missing or invalid'
       );
     }
 
@@ -83,9 +83,9 @@ export function csrfMiddleware(
       );
 
       throw new AppError(
+        403,
         ErrorCode.FORBIDDEN,
-        'CSRF token invalid',
-        403
+        'CSRF token invalid'
       );
     }
 
@@ -101,9 +101,9 @@ export function csrfMiddleware(
 
     logger.error({ error }, 'CSRF middleware error');
     throw new AppError(
+      500,
       ErrorCode.INTERNAL_SERVER_ERROR,
-      'CSRF validation failed',
-      500
+      'CSRF validation failed'
     );
   }
 }

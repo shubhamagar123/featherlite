@@ -74,9 +74,9 @@ export function createRateLimiter(config: Partial<RateLimitConfig> = {}) {
         );
 
         throw new AppError(
+          429,
           ErrorCode.RATE_LIMITED,
           'Too many requests, please try again later',
-          429,
           {
             retryAfter: Math.ceil(finalConfig.windowMs / 1000),
           }

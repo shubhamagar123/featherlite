@@ -89,9 +89,9 @@ export function validate(schemas: ValidationSchemas) {
         );
 
         throw new AppError(
+          422,
           ErrorCode.VALIDATION_ERROR,
           'Request validation failed',
-          422,
           { validationErrors: errors }
         );
       }
@@ -104,9 +104,9 @@ export function validate(schemas: ValidationSchemas) {
 
       logger.error({ error }, 'Validation middleware error');
       throw new AppError(
+        500,
         ErrorCode.INTERNAL_SERVER_ERROR,
-        'Validation failed',
-        500
+        'Validation failed'
       );
     }
   };

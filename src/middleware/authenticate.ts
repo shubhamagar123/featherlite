@@ -34,18 +34,18 @@ export async function authenticate(
 
     if (!authHeader) {
       throw new AppError(
+        401,
         ErrorCode.UNAUTHENTICATED,
-        'Missing Authorization header',
-        401
+        'Missing Authorization header'
       );
     }
 
     const parts = authHeader.split(' ');
     if (parts.length !== 2 || parts[0] !== 'Bearer') {
       throw new AppError(
+        401,
         ErrorCode.UNAUTHENTICATED,
-        'Invalid Authorization header format. Expected: Bearer <token>',
-        401
+        'Invalid Authorization header format. Expected: Bearer <token>'
       );
     }
 
@@ -71,9 +71,9 @@ export async function authenticate(
     } catch (error) {
       if (error instanceof admin.auth.AuthError) {
         throw new AppError(
+          401,
           ErrorCode.INVALID_TOKEN,
           'Invalid or expired authentication token',
-          401,
           { originalError: error.message }
         );
       }
@@ -86,9 +86,9 @@ export async function authenticate(
 
     logger.error({ error }, 'Authentication error');
     throw new AppError(
+      500,
       ErrorCode.INTERNAL_SERVER_ERROR,
-      'Authentication failed',
-      500
+      'Authentication failed'
     );
   }
 }

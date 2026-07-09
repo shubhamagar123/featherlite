@@ -14,9 +14,9 @@ export function authorize(...allowedRoles: UserRole[]) {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
       throw new AppError(
+        401,
         ErrorCode.UNAUTHENTICATED,
-        'User authentication required',
-        401
+        'User authentication required'
       );
     }
 
@@ -36,9 +36,9 @@ export function authorize(...allowedRoles: UserRole[]) {
       );
 
       throw new AppError(
+        403,
         ErrorCode.FORBIDDEN,
-        'Insufficient permissions for this operation',
-        403
+        'Insufficient permissions for this operation'
       );
     }
 
@@ -68,9 +68,9 @@ export function requireOwnership(
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
       throw new AppError(
+        401,
         ErrorCode.UNAUTHENTICATED,
-        'User authentication required',
-        401
+        'User authentication required'
       );
     }
 
@@ -78,9 +78,9 @@ export function requireOwnership(
 
     if (!resourceOwnerId) {
       throw new AppError(
+        400,
         ErrorCode.BAD_REQUEST,
-        'Could not determine resource owner',
-        400
+        'Could not determine resource owner'
       );
     }
 
@@ -96,9 +96,9 @@ export function requireOwnership(
       );
 
       throw new AppError(
+        403,
         ErrorCode.FORBIDDEN,
-        'You do not have permission to access this resource',
-        403
+        'You do not have permission to access this resource'
       );
     }
 
