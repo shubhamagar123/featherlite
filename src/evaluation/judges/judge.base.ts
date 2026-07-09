@@ -8,7 +8,7 @@ import { createLogger } from '@utils/logger';
 
 export abstract class BaseJudge {
   protected logger = createLogger(this.constructor.name);
-  protected judgeType: JudgeType;
+  protected judgeType!: JudgeType;
 
   abstract evaluate(
     scenario: EvaluationScenario,

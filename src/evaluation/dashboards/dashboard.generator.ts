@@ -6,7 +6,6 @@
 import {
   DashboardData,
   EvaluationReport,
-  MetricTrend,
   ReportMetrics,
   ModelComparisonData,
   PromptVersionComparison,
@@ -236,11 +235,10 @@ export class DashboardGenerator {
   }
 
   private detectRegressions(reports: EvaluationReport[]): any[] {
-    if (reports.length < 2) {
+    if (reports.length === 0) {
       return [];
     }
 
-    const prev = reports[reports.length - 2];
     const curr = reports[reports.length - 1];
 
     return curr.regressions || [];
@@ -339,9 +337,9 @@ export class DashboardGenerator {
     return comparisons.sort((a, b) => b.performanceDelta - a.performanceDelta);
   }
 
-  private calculatePerformanceDelta(prev: ReportMetrics, curr: ReportMetrics): number {
-    const prevScore = (prev.promptQuality + prev.memoryRecallRate + prev.contextQuality) / 3;
-    const currScore = (curr.promptQuality + curr.memoryRecallRate + curr.contextQuality) / 3;
+  private calculatePerformanceDelta(previousMetrics: ReportMetrics, currentMetrics: ReportMetrics): number {
+    const prevScore = (previousMetrics.promptQuality + previousMetrics.memoryRecallRate + previousMetrics.contextQuality) / 3;
+    const currScore = (currentMetrics.promptQuality + currentMetrics.memoryRecallRate + currentMetrics.contextQuality) / 3;
     return currScore - prevScore;
   }
 

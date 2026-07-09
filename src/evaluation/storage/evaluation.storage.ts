@@ -141,7 +141,6 @@ export class EvaluationStorage {
     latestResult: Date | null;
   }> {
     const allResults = Array.from(this.results.values());
-    const allReports = Array.from(this.reports.values());
 
     const dates = allResults.map(r => r.startTime).sort();
 

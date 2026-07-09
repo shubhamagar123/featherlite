@@ -47,8 +47,8 @@ export class LocalExecutor extends EvaluationExecutor {
     }
   }
 
-  private isMemoryQuestion(content: string): boolean {
-    return /remember|recall|did you know|do you|when.*told/i.test(content);
+  private isMemoryQuestion(_content: string): boolean {
+    return /remember|recall|did you know|do you|when.*told/i.test(_content);
   }
 
   private isRelationshipQuestion(content: string): boolean {
@@ -63,7 +63,7 @@ export class LocalExecutor extends EvaluationExecutor {
     return /weather|time|scene|beautiful|cold|hot|night|day/i.test(content);
   }
 
-  private generateMemoryResponse(scenario: EvaluationScenario, query: string): string {
+  private generateMemoryResponse(scenario: EvaluationScenario, _query: string): string {
     const memories = scenario.memoryState.factMemories.concat(
       scenario.memoryState.emotionalMemories,
       scenario.memoryState.sharedMemories
@@ -138,7 +138,7 @@ export class LocalExecutor extends EvaluationExecutor {
     return response;
   }
 
-  private generateGeneralResponse(scenario: EvaluationScenario, userContent: string): string {
+  private generateGeneralResponse(_scenario: EvaluationScenario, _userContent: string): string {
     const responses = [
       'That sounds interesting. Tell me more.',
       'I understand. How does that make you feel?',

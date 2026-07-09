@@ -111,8 +111,8 @@ export class EvaluationPipelineExecutor {
             break;
 
           case 'regression_detection':
-            if (previousReport) {
-              report = this.detectRegressions(report || previousReport, previousReport);
+            if (report) {
+              report = this.detectRegressions(report);
             }
             break;
 
@@ -188,8 +188,7 @@ export class EvaluationPipelineExecutor {
   }
 
   private detectRegressions(
-    current: EvaluationReport,
-    previous: EvaluationReport
+    current: EvaluationReport
   ): EvaluationReport {
     const regressions = current.regressions || [];
     const improvements = current.improvements || [];

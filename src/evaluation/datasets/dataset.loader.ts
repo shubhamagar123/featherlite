@@ -8,9 +8,7 @@ import {
   EvaluationScenarioType,
   EvaluationDatasetType,
   RelationshipState,
-  MemoryState,
   WorldState,
-  ExpectedBehaviour,
 } from '../types';
 import { createLogger } from '@utils/logger';
 import { v4 as uuidv4 } from 'uuid';
@@ -388,17 +386,17 @@ export class DatasetLoader {
           {
             role: 'user',
             content: 'It is a beautiful evening',
-            timestamp: new Date('2026-02-01', 18),
+            timestamp: new Date('2026-02-01T18:00:00'),
           },
           {
             role: 'companion',
             content: 'The sunset at this time is truly stunning.',
-            timestamp: new Date('2026-02-01', 18),
+            timestamp: new Date('2026-02-01T18:00:00'),
           },
           {
             role: 'user',
             content: 'How do you feel about the weather?',
-            timestamp: new Date('2026-02-01', 18),
+            timestamp: new Date('2026-02-01T18:00:00'),
           },
         ],
         worldState: {
@@ -408,6 +406,7 @@ export class DatasetLoader {
           timeOfDay: 'evening',
           season: 'winter',
           contextualEvents: ['sunset'],
+          metadata: undefined,
         },
         relationshipState: this.createDefaultRelationshipState(),
         memoryState: {
@@ -517,29 +516,30 @@ export class DatasetLoader {
   }
 
   private loadLongConversationScenarios(): EvaluationScenario[] {
+    const baseDate = new Date('2026-02-01T09:00:00');
     const conversationHistory = [
       {
-        role: 'user',
+        role: 'user' as const,
         content: 'Hi, how are you?',
-        timestamp: new Date('2026-02-01T09:00:00'),
+        timestamp: new Date(baseDate.getTime()),
       },
       {
-        role: 'companion',
+        role: 'companion' as const,
         content: 'I am doing well, thank you for asking!',
-        timestamp: new Date('2026-02-01T09:00:30'),
+        timestamp: new Date(baseDate.getTime() + 30000),
       },
     ];
 
     for (let i = 0; i < 20; i++) {
       conversationHistory.push({
-        role: 'user',
+        role: 'user' as const,
         content: `This is message ${i + 1} in our long conversation`,
-        timestamp: new Date(`2026-02-01T09:${String(i).padStart(2, '0')}:00`),
+        timestamp: new Date(baseDate.getTime() + i * 60000),
       });
       conversationHistory.push({
-        role: 'companion',
+        role: 'companion' as const,
         content: `Response to message ${i + 1}`,
-        timestamp: new Date(`2026-02-01T09:${String(i).padStart(2, '0')}:30`),
+        timestamp: new Date(baseDate.getTime() + i * 60000 + 30000),
       });
     }
 
@@ -579,6 +579,7 @@ export class DatasetLoader {
   }
 
   private loadStressScenarios(): EvaluationScenario[] {
+    const baseDate = new Date('2026-02-01T10:00:00');
     return [
       {
         id: uuidv4(),
@@ -586,29 +587,29 @@ export class DatasetLoader {
         description: 'Stress test - rapid back-to-back questions',
         conversationHistory: [
           {
-            role: 'user',
+            role: 'user' as const,
             content: 'What is 2+2?',
-            timestamp: new Date('2026-02-01T10:00:00'),
+            timestamp: new Date(baseDate.getTime()),
           },
           {
-            role: 'companion',
+            role: 'companion' as const,
             content: '2+2 equals 4.',
-            timestamp: new Date('2026-02-01T10:00:01'),
+            timestamp: new Date(baseDate.getTime() + 1000),
           },
           {
-            role: 'user',
+            role: 'user' as const,
             content: 'What about 5*6?',
-            timestamp: new Date('2026-02-01T10:00:02'),
+            timestamp: new Date(baseDate.getTime() + 2000),
           },
           {
-            role: 'companion',
+            role: 'companion' as const,
             content: '5*6 equals 30.',
-            timestamp: new Date('2026-02-01T10:00:03'),
+            timestamp: new Date(baseDate.getTime() + 3000),
           },
           {
-            role: 'user',
+            role: 'user' as const,
             content: 'What is the capital of France?',
-            timestamp: new Date('2026-02-01T10:00:04'),
+            timestamp: new Date(baseDate.getTime() + 4000),
           },
         ],
         worldState: this.createDefaultWorldState(),

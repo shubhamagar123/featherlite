@@ -5,7 +5,6 @@
 
 import {
   EvaluationResult,
-  EvaluationScenario,
   MetricResult,
   ReportMetrics,
   JudgeType,

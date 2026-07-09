@@ -124,7 +124,6 @@ export class TrendAnalyzer {
     }
 
     const recent = points.slice(-5);
-    const avg = recent.reduce((sum, p) => sum + p.value, 0) / recent.length;
     const oldest = recent[0].value;
     const newest = recent[recent.length - 1].value;
 

@@ -13,16 +13,13 @@ import {
 } from '../types';
 import { createLogger } from '@utils/logger';
 import { JudgeRegistry } from '../judges';
-import { v4 as uuidv4 } from 'uuid';
 
 export abstract class EvaluationExecutor {
   protected logger = createLogger(this.constructor.name);
-  protected judgeRegistry: JudgeRegistry;
   protected modelProvider: ModelProvider;
 
   constructor(modelProvider: ModelProvider) {
     this.modelProvider = modelProvider;
-    this.judgeRegistry = new JudgeRegistry();
   }
 
   abstract generateResponse(
@@ -39,7 +36,7 @@ export abstract class EvaluationExecutor {
         scenario.conversationHistory
       );
 
-      const judges = this.judgeRegistry.getAllJudges();
+      const judges = JudgeRegistry.getAllJudges();
       const judgeResults: JudgeResult[] = [];
 
       for (const judge of judges) {

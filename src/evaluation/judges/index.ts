@@ -283,7 +283,6 @@ export class ToneJudge extends BaseJudge {
     const avgWordLength = responseLength / Math.max(1, wordCount);
 
     const exclamationCount = (response.match(/!/g) || []).length;
-    const questionCount = (response.match(/\?/g) || []).length;
 
     if (avgWordLength < 3 || avgWordLength > 15) return 50;
     if (exclamationCount > wordCount / 5 || exclamationCount === 0) return 70;
@@ -444,7 +443,7 @@ export class ContextJudge extends BaseJudge {
 
     if (eventMarkers.length === 0) return 75;
 
-    const relevantEvents = eventMarkers.filter(e => responseText.includes(e)).length;
+    const relevantEvents = eventMarkers.filter((e: string) => responseText.includes(e)).length;
     return (relevantEvents / eventMarkers.length) * 100;
   }
 }
@@ -717,7 +716,7 @@ export class MomentJudge extends BaseJudge {
  * Factory for creating judges by type
  */
 export class JudgeRegistry {
-  private static judges = new Map<JudgeType, typeof BaseJudge>();
+  private static judges = new Map<JudgeType, new () => BaseJudge>();
 
   static {
     JudgeRegistry.judges.set(JudgeType.MEMORY, MemoryJudge);
