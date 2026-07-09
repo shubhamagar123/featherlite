@@ -4,7 +4,9 @@ import { corsMiddleware, securityHeaders, requestIdMiddleware } from '@middlewar
 import { requestContextMiddleware } from '@middleware/requestContext';
 import { requestLoggerMiddleware } from '@middleware/requestLogger';
 import { errorHandlerMiddleware, notFoundMiddleware } from '@middleware/errorHandler';
+import { metricsMiddleware } from '@middleware/metricsMiddleware';
 import { logger } from '@utils/logger';
+import { HealthChecker } from '@infra/health/health-check';
 
 export function createApp(): Application {
   const app = express();
@@ -29,24 +31,21 @@ export function createApp(): Application {
   // Request logging middleware
   app.use(requestLoggerMiddleware);
 
-  // Health endpoint (before other routes)
-  app.get('/health', (_req, res) => {
-    res.status(200).json({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      environment: environment.NODE_ENV,
-      version: '0.1.0',
-    });
+  // Metrics middleware
+  app.use(metricsMiddleware);
+
+  // Health endpoint (comprehensive checks)
+  app.get('/health', async (_req, res) => {
+    const health = await HealthChecker.performHealthCheck();
+    const statusCode = health.status === 'healthy' ? 200 : health.status === 'degraded' ? 503 : 503;
+    res.status(statusCode).json(health);
   });
 
-  // Readiness check endpoint
-  app.get('/ready', (_req, res) => {
-    // TODO: Add database and cache connection checks
-    res.status(200).json({
-      ready: true,
-      timestamp: new Date().toISOString(),
-    });
+  // Readiness check endpoint (critical checks only)
+  app.get('/ready', async (_req, res) => {
+    const readiness = await HealthChecker.performReadinessCheck();
+    const statusCode = readiness.status === 'healthy' ? 200 : 503;
+    res.status(statusCode).json(readiness);
   });
 
   // API routes will be mounted here in Step 3
