@@ -27,6 +27,7 @@ import { HealthChecker } from './health/health-checker';
 import { EventEngine } from '@engines/event';
 import { EventType, AggregateType, EventPriority, EventDispatchMode } from '@engines/event';
 import { EventFactory } from '@engines/event';
+import { PromptSanitizer } from './utils/prompt-sanitizer';
 
 export interface LLMGatewayDeps {
   providers: ILLMProvider[];
@@ -70,25 +71,31 @@ export class LLMGateway implements ILLMGateway {
   }
 
   async complete(request: LLMRequest): Promise<IResult<LLMResponse>> {
-    const namespacedCacheKey = this.getNamespacedCacheKey(request.userId, request.cacheKey);
+    // Sanitize messages to prevent prompt injection attacks
+    const sanitizedRequest = {
+      ...request,
+      messages: PromptSanitizer.sanitizeMessages(request.messages),
+    };
+
+    const namespacedCacheKey = this.getNamespacedCacheKey(sanitizedRequest.userId, sanitizedRequest.cacheKey);
     if (namespacedCacheKey) {
       const cached = this.cache.get(namespacedCacheKey);
       if (cached.isSuccess && cached.value) {
-        this.logger.debug({ requestId: request.requestId, cacheKey: namespacedCacheKey }, 'LLM cache hit');
+        this.logger.debug({ requestId: sanitizedRequest.requestId, cacheKey: namespacedCacheKey }, 'LLM cache hit');
         return Result.success({ ...cached.value, cached: true });
       }
     }
 
     const selection = this.selectProvider({
       strategy: LLMSelectionStrategy.PRIMARY_WITH_FALLBACK,
-      preferredProvider: request.provider,
+      preferredProvider: sanitizedRequest.provider,
     });
     if (!selection.isSuccess || !selection.value) {
       return Result.failure(selection.error ?? new Error('No provider available'));
     }
 
     const initialProvider = this.providers.get(selection.value)!;
-    const result = await this.executeWithRetryAndFallback(request, initialProvider);
+    const result = await this.executeWithRetryAndFallback(sanitizedRequest, initialProvider);
 
     if (result.isSuccess && result.value) {
       this.usage.recordSuccess(result.value);

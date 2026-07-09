@@ -52,7 +52,9 @@ export async function adminAuth(
     const token = parts[1];
 
     try {
-      const decoded = jwt.verify(token, environment.JWT_SECRET) as {
+      const decoded = jwt.verify(token, environment.JWT_SECRET, {
+        algorithms: ['HS256'],
+      }) as {
         service: string;
         role: string;
         iat: number;

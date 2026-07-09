@@ -9,6 +9,7 @@ import {
 } from '@middleware/index';
 import { successResponse } from '@api/index';
 import { logger } from '@utils/logger';
+import { getRedisClient } from '@infra/redis/redis.provider';
 
 /**
  * Auth API Routes
@@ -76,10 +77,18 @@ export async function registerAuthRoutes(app: Application): Promise<void> {
     authenticate,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        // TODO: Invalidate session in Redis/database
         const userId = req.user!.uid;
+        const redis = getRedisClient();
 
-        logger.info({ userId }, 'User logged out');
+        // Invalidate session by marking it as logged out in Redis
+        const sessionKey = `session:${userId}`;
+        await redis.setex(sessionKey, 1, 'INVALIDATED');
+
+        // Also clear any auth tokens for this user
+        const tokenKey = `auth:token:${userId}`;
+        await redis.del(tokenKey);
+
+        logger.info({ userId }, 'User logged out and session invalidated');
 
         res.status(200).json(
           successResponse(

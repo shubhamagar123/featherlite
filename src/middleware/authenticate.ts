@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import * as admin from 'firebase-admin';
 import { logger } from '@utils/logger';
 import { AppError, ErrorCode } from '@utils/error';
+import { getRedisClient } from '@infra/redis/redis.provider';
 
 // Extend Express Request to include user
 declare global {
@@ -53,6 +54,19 @@ export async function authenticate(
 
     try {
       const decodedToken = await admin.auth().verifyIdToken(idToken);
+
+      // Check if session has been invalidated (user logged out)
+      const redis = getRedisClient();
+      const sessionKey = `session:${decodedToken.uid}`;
+      const sessionStatus = await redis.get(sessionKey);
+
+      if (sessionStatus === 'INVALIDATED') {
+        throw new AppError(
+          401,
+          ErrorCode.UNAUTHENTICATED,
+          'Session has been invalidated. Please log in again.'
+        );
+      }
 
       // Set user info on request object
       req.user = {
