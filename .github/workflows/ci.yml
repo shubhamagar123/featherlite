@@ -89,6 +89,12 @@ jobs:
           DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
 
+      - name: Run architecture fitness tests
+        run: npm run test:architecture
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+
       - name: Upload coverage
         uses: codecov/codecov-action@v3
         with:
