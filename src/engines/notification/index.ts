@@ -17,16 +17,11 @@ export type {
 } from './interfaces/notification.interfaces';
 
 export { NotificationBuilder } from './builder/notification.builder';
-export { NotificationScheduler } from './scheduler/notification.scheduler';
 export {
   NotificationDispatcher,
   DEFAULT_RETRY_POLICY,
 } from './dispatcher/notification.dispatcher';
 export type { NotificationChannelTransport } from './dispatcher/notification.dispatcher';
-export {
-  NotificationThrottler,
-  DEFAULT_THROTTLE_POLICY,
-} from './throttler/notification.throttler';
 export { NotificationAnalytics } from './analytics/notification.analytics';
 export {
   NotificationTemplateRegistry,

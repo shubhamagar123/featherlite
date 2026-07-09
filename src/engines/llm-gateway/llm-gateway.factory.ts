@@ -1,12 +1,13 @@
 import { ILLMGateway } from './interfaces/llm-gateway.interface';
 import { ILLMProvider } from './interfaces/llm-provider.interface';
 import { LLMGateway } from './llm-gateway';
-import { LLMCacheService } from './cache/llm-cache.service';
+import { RedisLLMCache } from '@infra/cache/redis-llm-cache.service';
 import { LLMProviderFactory } from './factories/provider.factory';
 import { LLMProviderTransport } from './providers/base-llm-provider';
 import { LLMProviderConfig, LLMRetryPolicy } from './dtos/llm-gateway.dtos';
 import { LLMProviderType, LLMFinishReason } from './enums/llm-gateway.enums';
 import { EventEngine, getEventEngine } from '@engines/event';
+import { getRedisClient } from '@infra/redis/redis.provider';
 
 export interface LLMGatewayDepsOverride {
   providers?: ILLMProvider[];
@@ -102,7 +103,7 @@ export function getLLMGateway(deps: LLMGatewayDepsOverride = {}): ILLMGateway {
 
   const gateway = new LLMGateway({
     providers,
-    cache: new LLMCacheService(),
+    cache: new RedisLLMCache(getRedisClient()),
     eventEngine: deps.eventEngine ?? getEventEngine(),
     retryPolicy: deps.retryPolicy,
   });

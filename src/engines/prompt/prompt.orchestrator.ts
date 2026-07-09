@@ -35,7 +35,11 @@ export class PromptOrchestrator implements IPromptOrchestrator {
   }
 
   async getCachedPrompt(cacheKey: string): Promise<IResult<PromptPayload | null>> {
-    return this.deps.cache.get(cacheKey);
+    const result = await this.deps.cache.get(cacheKey);
+    if (result.isSuccess && result.value) {
+      return Result.success({ ...result.value, cached: true });
+    }
+    return result;
   }
 
   async getAnalytics(templateId: string): Promise<IResult<PromptAnalytics[]>> {

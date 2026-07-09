@@ -25,8 +25,9 @@ import { MemoryQueryBuilder } from './builders/memory-query-builder';
 import { MemoryRetriever } from './components/memory-retriever';
 import { MemoryFilter } from './components/memory-filter';
 import { MemoryRanker } from './components/memory-ranker';
-import { MemoryQueryCache } from './cache/memory-query-cache';
+import { RedisMemoryCache } from '@infra/cache/redis-memory-cache.service';
 import { MemoryContextMatcher } from './components/memory-context-matcher';
+import { getRedisClient } from '@infra/redis/redis.provider';
 import { RecencyScorer } from './scorers/recency-scorer';
 import { ImportanceScorer } from './scorers/importance-scorer';
 import { ConfidenceScorer } from './scorers/confidence-scorer';
@@ -49,7 +50,7 @@ export class MemoryQueryService implements IMemoryQueryService {
     this.retriever = new MemoryRetriever();
     this.filter = new MemoryFilter();
     this.ranker = new MemoryRanker();
-    this.cache = new MemoryQueryCache();
+    this.cache = new RedisMemoryCache(getRedisClient());
     this.contextMatcher = new MemoryContextMatcher();
     // Retained for future context-based pre-filter; unused today.
     void this.contextMatcher;

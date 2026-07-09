@@ -9,7 +9,6 @@ export { PromptOrchestrator } from './prompt.orchestrator';
 export { PromptComposer } from './composers/prompt.composer';
 export { PromptCompressor } from './compressor/prompt.compressor';
 export { PromptValidator } from './validator/prompt.validator';
-export { PromptCacheService } from './cache/prompt-cache.service';
 export { PromptAnalyticsRecorder } from './analytics/prompt.analytics';
 export { TemplateRegistry } from './templates/template-registry';
 export { RuleRegistry, DEFAULT_RULES } from './rules/rule-registry';

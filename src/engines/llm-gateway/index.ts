@@ -20,7 +20,6 @@ export { FallbackStrategy } from './strategies/fallback.strategy';
 
 export { UsageMetrics } from './metrics/usage-metrics';
 export { HealthChecker } from './health/health-checker';
-export { LLMCacheService } from './cache/llm-cache.service';
 
 export type {
   LLMRequest,

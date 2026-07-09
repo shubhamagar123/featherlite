@@ -22,15 +22,16 @@ import {
   NotificationChannel,
 } from './enums/notification.enums';
 import { NotificationBuilder } from './builder/notification.builder';
-import { NotificationScheduler } from './scheduler/notification.scheduler';
+import { RedisNotificationScheduler } from './scheduler/redis-notification.scheduler';
 import { NotificationDispatcher } from './dispatcher/notification.dispatcher';
-import { NotificationThrottler } from './throttler/notification.throttler';
+import { RedisNotificationThrottler } from './throttler/redis-notification.throttler';
 import { NotificationAnalytics } from './analytics/notification.analytics';
 import { NotificationTemplateRegistry } from './templates/notification.templates';
 import { NotificationRules } from './rules/notification.rules';
 import { MomentTriggeredHandler } from './handlers/moment-triggered.handler';
 import { EventEngine, EventType } from '@engines/event';
 import type { INotificationService } from '@services/notification/notification.service.interface';
+import { getRedisClient } from '@infra/redis/redis.provider';
 
 export interface NotificationEngineDeps {
   templates?: INotificationTemplateRegistry;
@@ -60,9 +61,9 @@ export class NotificationEngine implements INotificationEngine {
     this.logger = createLogger('NotificationEngine');
     this.templates = deps.templates ?? new NotificationTemplateRegistry();
     this.builder = deps.builder ?? new NotificationBuilder(this.templates);
-    this.scheduler = deps.scheduler ?? new NotificationScheduler();
+    this.scheduler = deps.scheduler ?? new RedisNotificationScheduler(getRedisClient());
     this.dispatcher = deps.dispatcher ?? new NotificationDispatcher();
-    this.throttler = deps.throttler ?? new NotificationThrottler();
+    this.throttler = deps.throttler ?? new RedisNotificationThrottler(getRedisClient());
     this.analytics = deps.analytics ?? new NotificationAnalytics();
     this.rules = deps.rules ?? new NotificationRules();
     this.eventEngine = deps.eventEngine;

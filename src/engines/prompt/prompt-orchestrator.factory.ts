@@ -3,7 +3,7 @@ import { PromptOrchestrator } from './prompt.orchestrator';
 import { PromptComposer } from './composers/prompt.composer';
 import { PromptCompressor } from './compressor/prompt.compressor';
 import { PromptValidator } from './validator/prompt.validator';
-import { PromptCacheService } from './cache/prompt-cache.service';
+import { RedisPromptCacheService } from '@infra/cache/redis-prompt-cache.service';
 import { PromptAnalyticsRecorder } from './analytics/prompt.analytics';
 import { TemplateRegistry } from './templates/template-registry';
 import { RuleRegistry } from './rules/rule-registry';
@@ -12,6 +12,7 @@ import { ContextInjector } from './builders/context-injector';
 import { TokenBudgeter } from './builders/token-budgeter';
 import { AssemblyStrategyRegistry } from './strategies/strategy-registry';
 import { EventEngine, getEventEngine } from '@engines/event';
+import { getRedisClient } from '@infra/redis/redis.provider';
 
 export interface PromptOrchestratorDeps {
   promptOrchestrator?: IPromptOrchestrator;
@@ -29,7 +30,7 @@ export function getPromptOrchestrator(deps: PromptOrchestratorDeps = {}): IPromp
 
   const templates = deps.templates ?? new TemplateRegistry();
   const rules = deps.rules ?? new RuleRegistry();
-  const cache = new PromptCacheService();
+  const cache = new RedisPromptCacheService(getRedisClient());
   const analytics = new PromptAnalyticsRecorder();
   const eventEngine = deps.eventEngine ?? getEventEngine();
 

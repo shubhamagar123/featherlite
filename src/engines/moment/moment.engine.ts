@@ -15,12 +15,13 @@ import {
 } from './enums/moment.enums';
 import { MomentEvaluator } from './evaluator/moment.evaluator';
 import { MomentGenerator } from './generator/moment.generator';
-import { MomentScheduler } from './scheduler/moment.scheduler';
+import { RedisMomentScheduler } from './scheduler/redis-moment.scheduler';
 import { MomentRules } from './rules/moment.rules';
 import { MomentTriggeredEvent } from './events/moment-scheduled.event';
 import { EventEngine, EventDispatchMode, EventType } from '@engines/event';
 import type { IMomentService } from '@services/moment/moment.service.interface';
 import { MomentSourceEventHandler } from './handlers/moment-source-event.handler';
+import { getRedisClient } from '@infra/redis/redis.provider';
 
 export interface MomentEngineDeps {
   evaluator?: IMomentEvaluator;
@@ -52,7 +53,7 @@ export class MomentEngine implements IMomentEngine {
     this.logger = createLogger('MomentEngine');
     this.evaluator = deps.evaluator ?? new MomentEvaluator();
     this.generator = deps.generator ?? new MomentGenerator();
-    this.scheduler = deps.scheduler ?? new MomentScheduler();
+    this.scheduler = deps.scheduler ?? new RedisMomentScheduler(getRedisClient());
     this.rules = deps.rules ?? new MomentRules();
     this.eventEngine = deps.eventEngine;
     this.momentService = deps.momentService;

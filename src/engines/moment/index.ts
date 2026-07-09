@@ -12,7 +12,6 @@ export type {
 
 export { MomentEvaluator } from './evaluator/moment.evaluator';
 export { MomentGenerator } from './generator/moment.generator';
-export { MomentScheduler } from './scheduler/moment.scheduler';
 export { MomentRules } from './rules/moment.rules';
 export { MomentTriggeredEvent } from './events/moment-scheduled.event';
 export type { MomentTriggeredPayload } from './events/moment-scheduled.event';

@@ -52,7 +52,7 @@ export class PromptComposer implements IPromptComposer {
       const cacheKey = this.deriveCacheKey(context);
       const cached = await this.deps.cache.get(cacheKey);
       if (cached.isSuccess && cached.value) {
-        return Result.success(cached.value);
+        return Result.success({ ...cached.value, cached: true });
       }
 
       // 1. Compile rules for this prompt type.

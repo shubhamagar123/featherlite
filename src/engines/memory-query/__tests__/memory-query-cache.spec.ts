@@ -1,13 +1,14 @@
-import { MemoryQueryCache } from '../cache/memory-query-cache';
+import { RedisMemoryCache } from '@infra/cache/redis-memory-cache.service';
 import { MemoryQueryResult } from '../dto/memory-query.dto';
 import { MemoryQueryType, QueryScope, RankingMode } from '../enums/memory-query.enums';
+import { getRedisClient } from '@infra/redis/redis.provider';
 
 describe('MemoryQueryCache', () => {
-  let cache: MemoryQueryCache;
+  let cache: RedisMemoryCache;
   let mockResult: MemoryQueryResult;
 
   beforeEach(() => {
-    cache = new MemoryQueryCache();
+    cache = new RedisMemoryCache(getRedisClient());
     mockResult = {
       query: {
         queryType: MemoryQueryType.RECENT,

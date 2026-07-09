@@ -69,12 +69,12 @@ export class LLMGateway implements ILLMGateway {
   }
 
   async complete(request: LLMRequest): Promise<IResult<LLMResponse>> {
-    const cacheKey = request.cacheKey;
-    if (cacheKey) {
-      const cached = this.cache.get(cacheKey);
+    const namespacedCacheKey = this.getNamespacedCacheKey(request.userId, request.cacheKey);
+    if (namespacedCacheKey) {
+      const cached = this.cache.get(namespacedCacheKey);
       if (cached.isSuccess && cached.value) {
-        this.logger.debug({ requestId: request.requestId, cacheKey }, 'LLM cache hit');
-        return Result.success(cached.value);
+        this.logger.debug({ requestId: request.requestId, cacheKey: namespacedCacheKey }, 'LLM cache hit');
+        return Result.success({ ...cached.value, cached: true });
       }
     }
 
@@ -91,8 +91,8 @@ export class LLMGateway implements ILLMGateway {
 
     if (result.isSuccess && result.value) {
       this.usage.recordSuccess(result.value);
-      if (cacheKey && request.cacheTtlMs && request.cacheTtlMs > 0) {
-        this.cache.set(cacheKey, result.value, request.cacheTtlMs);
+      if (namespacedCacheKey && request.cacheTtlMs && request.cacheTtlMs > 0) {
+        this.cache.set(namespacedCacheKey, result.value, request.cacheTtlMs);
       }
       await this.publishResponseEvent(request, result.value);
     } else {
@@ -141,6 +141,16 @@ export class LLMGateway implements ILLMGateway {
   resetMetrics(): void {
     this.usage.reset();
     this.cache.clear();
+  }
+
+  private getNamespacedCacheKey(userId: string | undefined, cacheKey: string | undefined): string | undefined {
+    if (!cacheKey) {
+      return undefined;
+    }
+    if (!userId) {
+      return cacheKey;
+    }
+    return `${userId}:${cacheKey}`;
   }
 
   private async executeWithRetryAndFallback(
