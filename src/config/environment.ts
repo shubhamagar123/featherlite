@@ -101,6 +101,11 @@ const envSchema = z
     // Session Configuration — minimum 32 chars to ensure adequate entropy
     SESSION_SECRET: z.string().min(32),
     SESSION_MAX_AGE_MS: z.coerce.number().default(604800000),
+
+    // OpenTelemetry Configuration
+    OTEL_ENABLED: boolEnv(false),
+    OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().default('http://localhost:4318'),
+    OTEL_SAMPLING_RATE: z.coerce.number().default(1.0),
   })
   .superRefine((data, ctx) => {
     if (data.NODE_ENV !== 'production') return;
