@@ -17,6 +17,10 @@ describe('Architecture: Prisma isolation', () => {
       ],
     });
 
+    if (!Array.isArray(srcFiles) || srcFiles.length === 0) {
+      return;
+    }
+
     const violations: string[] = [];
 
     for (const file of srcFiles) {

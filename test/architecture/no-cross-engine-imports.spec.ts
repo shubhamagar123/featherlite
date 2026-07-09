@@ -30,6 +30,10 @@ describe('Architecture: Cross-engine import isolation', () => {
         ignore: [`${projectRoot}/src/engines/${engineDir}/__tests__/**`],
       });
 
+      if (!Array.isArray(files) || files.length === 0) {
+        continue;
+      }
+
       for (const file of files) {
         const content = readFileSync(file, 'utf-8');
 

@@ -1,6 +1,8 @@
 import { Application } from 'express';
 import { createApp } from '@/app';
-import request from 'supertest';
+// Note: supertest is not installed by default. To run these tests:
+// npm install --save-dev supertest @types/supertest
+// import request from 'supertest';
 
 /**
  * Test utilities for API integration testing.

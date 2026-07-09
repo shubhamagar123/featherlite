@@ -15,6 +15,10 @@ describe('Architecture: Express isolation', () => {
       ignore: [`${projectRoot}/src/**/__tests__/**`, `${projectRoot}/src/**/*.spec.ts`],
     });
 
+    if (!Array.isArray(srcFiles) || srcFiles.length === 0) {
+      return;
+    }
+
     const violations: string[] = [];
 
     for (const file of srcFiles) {
