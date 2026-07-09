@@ -4,6 +4,7 @@
  * Manages composition root for interaction orchestration components.
  */
 
+import Redis from 'ioredis';
 import { InteractionOrchestrator } from './interaction-orchestrator';
 import { ConversationManager } from './managers/conversation.manager';
 import { VoiceManager } from './managers/voice.manager';
@@ -14,6 +15,8 @@ import { InterruptionManager } from './managers/interruption.manager';
 import { StreamingManager } from './managers/streaming.manager';
 import { TypingManager } from './managers/typing.manager';
 import { SilenceManager } from './managers/silence.manager';
+import { RedisSessionService } from './services/redis-session.service';
+import { redisClientProvider } from '@infra/redis';
 
 /** Dependency configuration for InteractionOrchestrator. */
 export interface InteractionOrchestratorDeps {
@@ -26,6 +29,7 @@ export interface InteractionOrchestratorDeps {
   streamingManager?: StreamingManager;
   typingManager?: TypingManager;
   silenceManager?: SilenceManager;
+  redisClient?: Redis;
 }
 
 let instance: InteractionOrchestrator | null = null;
@@ -42,6 +46,9 @@ export function registerInteractionOrchestrator(deps: InteractionOrchestratorDep
   const typingManager = deps.typingManager || new TypingManager();
   const silenceManager = deps.silenceManager || new SilenceManager();
 
+  const redisClient = deps.redisClient || redisClientProvider.getClient();
+  const sessionService = new RedisSessionService(redisClient);
+
   instance = new InteractionOrchestrator(
     conversationManager,
     voiceManager,
@@ -51,7 +58,8 @@ export function registerInteractionOrchestrator(deps: InteractionOrchestratorDep
     interruptionManager,
     streamingManager,
     typingManager,
-    silenceManager
+    silenceManager,
+    sessionService
   );
 }
 

@@ -3,7 +3,7 @@
  *
  * Routes interactions to specialized managers and maintains session state
  * across text chat, voice calls, activities, presence, typing, streaming,
- * interruptions, and silence.
+ * interruptions, and silence. Sessions are persisted in Redis for horizontal scale.
  */
 
 import { IResult, Result } from '@services/types/result.type';
@@ -27,10 +27,10 @@ import { InterruptionManager } from './managers/interruption.manager';
 import { StreamingManager } from './managers/streaming.manager';
 import { TypingManager } from './managers/typing.manager';
 import { SilenceManager } from './managers/silence.manager';
+import { RedisSessionService } from './services/redis-session.service';
 
 export class InteractionOrchestrator implements IInteractionOrchestrator {
   private readonly logger: Logger;
-  private sessions: Map<string, InteractionSession> = new Map();
 
   constructor(
     private conversationManager: ConversationManager,
@@ -41,7 +41,8 @@ export class InteractionOrchestrator implements IInteractionOrchestrator {
     private interruptionManager: InterruptionManager,
     private streamingManager: StreamingManager,
     private typingManager: TypingManager,
-    private silenceManager: SilenceManager
+    private silenceManager: SilenceManager,
+    private sessionService: RedisSessionService
   ) {
     this.logger = createLogger('InteractionOrchestrator');
   }
@@ -95,8 +96,8 @@ export class InteractionOrchestrator implements IInteractionOrchestrator {
 
   async getSession(sessionId: string, userId: string): Promise<IResult<InteractionSession>> {
     try {
-      const session = this.sessions.get(sessionId);
-      if (!session || session.userId !== userId) {
+      const session = await this.sessionService.getSession(sessionId, userId);
+      if (!session) {
         return Result.failure(new Error('Session not found'));
       }
       return Result.success(session);
@@ -137,7 +138,7 @@ export class InteractionOrchestrator implements IInteractionOrchestrator {
         },
       };
 
-      this.sessions.set(sessionId, session);
+      await this.sessionService.createSession(session);
       this.logger.info({ sessionId, userId, companionId }, 'Created interaction session');
       return Result.success(session);
     } catch (error) {
@@ -148,14 +149,17 @@ export class InteractionOrchestrator implements IInteractionOrchestrator {
 
   async endSession(sessionId: string, userId: string): Promise<IResult<InteractionSessionSummary>> {
     try {
-      const session = this.sessions.get(sessionId);
-      if (!session || session.userId !== userId) {
+      const session = await this.sessionService.getSession(sessionId, userId);
+      if (!session) {
         return Result.failure(new Error('Session not found'));
       }
 
       const now = new Date();
       session.state = InteractionSessionState.COMPLETED;
       session.endedAt = now;
+
+      await this.sessionService.updateSession(session);
+      await this.sessionService.deleteSession(sessionId);
 
       const totalDurationMs = session.endedAt.getTime() - session.startedAt.getTime();
       const interactionTypes = [...new Set(session.interactions.map(i => i.type))];
@@ -189,12 +193,7 @@ export class InteractionOrchestrator implements IInteractionOrchestrator {
     limit: number = 10
   ): Promise<IResult<AnyInteraction[]>> {
     try {
-      const session = this.sessions.get(sessionId);
-      if (!session || session.userId !== userId) {
-        return Result.failure(new Error('Session not found'));
-      }
-
-      const history = session.interactions.slice(-limit);
+      const history = await this.sessionService.getSessionHistory(sessionId, userId, limit);
       return Result.success(history);
     } catch (error) {
       return Result.failure(error instanceof Error ? error : new Error(String(error)));
@@ -206,8 +205,8 @@ export class InteractionOrchestrator implements IInteractionOrchestrator {
     userId: string
   ): Promise<IResult<InteractionSessionSummary>> {
     try {
-      const session = this.sessions.get(sessionId);
-      if (!session || session.userId !== userId) {
+      const session = await this.sessionService.getSession(sessionId, userId);
+      if (!session) {
         return Result.failure(new Error('Session not found'));
       }
 
@@ -269,9 +268,6 @@ export class InteractionOrchestrator implements IInteractionOrchestrator {
   }
 
   private async addToSession(sessionId: string, interaction: AnyInteraction): Promise<void> {
-    const session = this.sessions.get(sessionId);
-    if (session) {
-      session.interactions.push(interaction);
-    }
+    await this.sessionService.addInteraction(sessionId, interaction);
   }
 }
