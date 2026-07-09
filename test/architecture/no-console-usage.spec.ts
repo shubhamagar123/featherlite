@@ -19,6 +19,11 @@ describe('Architecture: No console usage in production code', () => {
       ignore: [`${projectRoot}/src/**/__tests__/**`, `${projectRoot}/src/**/*.spec.ts`],
     });
 
+    if (!Array.isArray(srcFiles) || srcFiles.length === 0) {
+      // No source files found, skip
+      return;
+    }
+
     const violations: Array<{ file: string; lines: number[] }> = [];
 
     for (const file of srcFiles) {

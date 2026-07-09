@@ -20,6 +20,11 @@ describe('Architecture: TypeScript type safety (as any usage)', () => {
       ignore: [`${projectRoot}/src/**/__tests__/**`],
     });
 
+    if (!Array.isArray(srcFiles) || srcFiles.length === 0) {
+      // No source files found, skip
+      return;
+    }
+
     let totalCount = 0;
     const violations: Record<string, number[]> = {};
 

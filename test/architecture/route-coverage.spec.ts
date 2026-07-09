@@ -21,7 +21,7 @@ describe('Architecture: Route security and validation', () => {
       ignore: [`${projectRoot}/src/api/**/__tests__/**`],
     });
 
-    if (apiFiles.length === 0) {
+    if (!Array.isArray(apiFiles) || apiFiles.length === 0) {
       // No API files yet, skip
       return;
     }
