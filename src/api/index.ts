@@ -9,6 +9,7 @@ import { registerRelationshipRoutes } from './relationship/relationship.routes';
 import { registerNotificationRoutes } from './notification/notification.routes';
 import { registerMomentRoutes } from './moment/moment.routes';
 import { serveOpenApiSpec } from './openapi';
+import { registerV1Routes } from '@routes/v1';
 
 /**
  * Route registry for API modules
@@ -27,7 +28,10 @@ export async function mountApi(app: Application): Promise<void> {
   logger.info('🚀 Mounting API routes...');
 
   try {
-    // Register all route modules in order
+    // Register V1 routes (new application layer)
+    registerV1Routes(app);
+
+    // Register legacy route modules in order
     await registerAuthRoutes(app);
     await registerUserRoutes(app);
     await registerCompanionRoutes(app);
