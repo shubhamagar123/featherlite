@@ -12,6 +12,7 @@ import {
   LLMProviderHealth,
   LLMUsageSnapshot,
   LLMRetryPolicy,
+  LLMRequestPriority,
 } from './dtos/llm-gateway.dtos';
 import {
   LLMProviderType,
@@ -72,10 +73,13 @@ export class LLMGateway implements ILLMGateway {
 
   async complete(request: LLMRequest): Promise<IResult<LLMResponse>> {
     // Sanitize messages to prevent prompt injection attacks
-    const sanitizedRequest = {
+    let sanitizedRequest = {
       ...request,
       messages: PromptSanitizer.sanitizeMessages(request.messages),
     };
+
+    // Tier 2A: Optimize max_tokens based on priority
+    sanitizedRequest = this.optimizeMaxTokens(sanitizedRequest);
 
     const namespacedCacheKey = this.getNamespacedCacheKey(sanitizedRequest.userId, sanitizedRequest.cacheKey);
     if (namespacedCacheKey) {
@@ -86,8 +90,10 @@ export class LLMGateway implements ILLMGateway {
       }
     }
 
+    // Intelligent provider routing based on request priority (Tier 1A)
+    const strategy = this.getSelectionStrategy(sanitizedRequest.priority);
     const selection = this.selectProvider({
-      strategy: LLMSelectionStrategy.PRIMARY_WITH_FALLBACK,
+      strategy,
       preferredProvider: sanitizedRequest.provider,
     });
     if (!selection.isSuccess || !selection.value) {
@@ -111,9 +117,14 @@ export class LLMGateway implements ILLMGateway {
   }
 
   async *stream(request: LLMRequest): AsyncIterable<LLMStreamChunk> {
+    // Tier 2A: Optimize max_tokens based on priority
+    const optimizedRequest = this.optimizeMaxTokens(request);
+
+    // Intelligent provider routing based on request priority (Tier 1A)
+    const strategy = this.getSelectionStrategy(optimizedRequest.priority);
     const selection = this.selectProvider({
-      strategy: LLMSelectionStrategy.PRIMARY_WITH_FALLBACK,
-      preferredProvider: request.provider,
+      strategy,
+      preferredProvider: optimizedRequest.provider,
     });
     if (!selection.isSuccess || !selection.value) {
       throw selection.error ?? new Error('No provider available');
@@ -123,14 +134,14 @@ export class LLMGateway implements ILLMGateway {
     let accumulatedContent = '';
     let totalTokens = 0;
 
-    for await (const chunk of provider.stream(request)) {
+    for await (const chunk of provider.stream(optimizedRequest)) {
       accumulatedContent += chunk.delta;
       yield chunk;
 
       if (chunk.finished) {
         // Emit terminal event when stream completes
         const response: LLMResponse = {
-          requestId: request.requestId,
+          requestId: optimizedRequest.requestId,
           provider: chunk.provider,
           model: chunk.model,
           status: LLMResponseStatus.SUCCESS,
@@ -152,8 +163,63 @@ export class LLMGateway implements ILLMGateway {
           fallbacksUsed: [],
           createdAt: new Date(),
         };
-        await this.publishResponseEvent(request, response);
+        await this.publishResponseEvent(optimizedRequest, response);
       }
+    }
+  }
+
+  /**
+   * Tier 1A: Intelligent Model Routing
+   * Determines provider selection strategy based on request priority.
+   * CRITICAL: High-quality models (Claude)
+   * HIGH: Balanced models (Claude with Gemini fallback)
+   * STANDARD: Cost-optimized models (Gemini with OpenAI fallback)
+   */
+  private getSelectionStrategy(priority?: LLMRequestPriority): LLMSelectionStrategy {
+    switch (priority) {
+      case LLMRequestPriority.CRITICAL:
+        // Real-time user interactions: prioritize quality/latency
+        return LLMSelectionStrategy.BEST_QUALITY;
+      case LLMRequestPriority.HIGH:
+        // Important but non-real-time: balanced approach
+        return LLMSelectionStrategy.PRIMARY_WITH_FALLBACK;
+      case LLMRequestPriority.STANDARD:
+      default:
+        // Batch/evaluation: prioritize cost (Gemini first)
+        return LLMSelectionStrategy.LOWEST_COST;
+    }
+  }
+
+  /**
+   * Tier 2A: Max Token Allocation Optimization
+   * Reduces completion token allocation based on request priority and type.
+   * CRITICAL: 256 tokens (real-time responses typically 80-150 tokens)
+   * HIGH: 300 tokens (structured judgments ~150-250 tokens)
+   * STANDARD: 150 tokens (simple evaluations/judgments ~50-120 tokens)
+   */
+  private optimizeMaxTokens(request: LLMRequest): LLMRequest {
+    if (request.maxTokens !== undefined) {
+      return request; // Respect explicit max_tokens
+    }
+
+    const priority = request.priority ?? LLMRequestPriority.STANDARD;
+    const optimizedMaxTokens = this.getOptimizedMaxTokens(priority);
+
+    return {
+      ...request,
+      maxTokens: optimizedMaxTokens,
+    };
+  }
+
+  private getOptimizedMaxTokens(priority: LLMRequestPriority): number {
+    switch (priority) {
+      case LLMRequestPriority.CRITICAL:
+        return 256; // Conversation responses: ~80-150 tokens average
+      case LLMRequestPriority.HIGH:
+        return 300; // Structured responses: ~150-250 tokens average
+      case LLMRequestPriority.STANDARD:
+      default:
+        return 150; // Evaluation responses: ~50-120 tokens average
     }
   }
 

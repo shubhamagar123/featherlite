@@ -21,21 +21,11 @@ let cached: ILLMGateway | null = null;
 
 const DEFAULT_PROVIDER_CONFIGS: LLMProviderConfig[] = [
   {
-    type: LLMProviderType.OPENAI,
-    model: 'gpt-4o-mini',
-    enabled: true,
-    priority: 1,
-    timeoutMs: 30_000,
-    retryAttempts: 3,
-    fallbackProviders: [LLMProviderType.CLAUDE, LLMProviderType.GEMINI],
-    pricing: { promptCostPerMillion: 0.15, completionCostPerMillion: 0.6 },
-    rateLimit: { requestsPerMinute: 500, tokensPerMinute: 200_000 },
-  },
-  {
+    // Tier 1A: Quality-first provider (lowest priority number = highest quality)
     type: LLMProviderType.CLAUDE,
     model: 'claude-haiku-4-5',
     enabled: true,
-    priority: 2,
+    priority: 1,  // Best quality for BEST_QUALITY strategy
     timeoutMs: 30_000,
     retryAttempts: 3,
     fallbackProviders: [LLMProviderType.OPENAI, LLMProviderType.GEMINI],
@@ -43,14 +33,26 @@ const DEFAULT_PROVIDER_CONFIGS: LLMProviderConfig[] = [
     rateLimit: { requestsPerMinute: 500, tokensPerMinute: 200_000 },
   },
   {
+    // Tier 1A: Cost-optimized provider (lowest cost for LOWEST_COST strategy)
     type: LLMProviderType.GEMINI,
     model: 'gemini-1.5-flash',
     enabled: true,
-    priority: 3,
+    priority: 2,  // Cheapest option for STANDARD priority requests
     timeoutMs: 30_000,
     retryAttempts: 3,
     fallbackProviders: [LLMProviderType.OPENAI, LLMProviderType.CLAUDE],
     pricing: { promptCostPerMillion: 0.075, completionCostPerMillion: 0.3 },
+    rateLimit: { requestsPerMinute: 500, tokensPerMinute: 200_000 },
+  },
+  {
+    type: LLMProviderType.OPENAI,
+    model: 'gpt-4o-mini',
+    enabled: true,
+    priority: 3,
+    timeoutMs: 30_000,
+    retryAttempts: 3,
+    fallbackProviders: [LLMProviderType.CLAUDE, LLMProviderType.GEMINI],
+    pricing: { promptCostPerMillion: 0.15, completionCostPerMillion: 0.6 },
     rateLimit: { requestsPerMinute: 500, tokensPerMinute: 200_000 },
   },
   {

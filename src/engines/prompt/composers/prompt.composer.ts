@@ -86,7 +86,8 @@ export class PromptComposer implements IPromptComposer {
       };
 
       const systemContent = this.deps.contextInjector.inject(sysTemplate, context, extras);
-      const developerContent = devTemplate
+      const includeDeveloperPrompt = this.shouldIncludeDeveloperPrompt(context);
+      const developerContent = includeDeveloperPrompt && devTemplate
         ? this.deps.contextInjector.inject(devTemplate, context, extras)
         : undefined;
       const userContent = this.deps.contextInjector.inject(usrTemplate, context, extras);
@@ -249,5 +250,10 @@ export class PromptComposer implements IPromptComposer {
       case 'STANDARD':
       default: return 'balanced, warm, concise';
     }
+  }
+
+  private shouldIncludeDeveloperPrompt(context: PromptBuildContext): boolean {
+    if (!context.priority) return true;
+    return context.priority !== 'STANDARD';
   }
 }

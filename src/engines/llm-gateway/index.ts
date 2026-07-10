@@ -43,3 +43,5 @@ export {
   LLMSelectionStrategy,
   LLMFinishReason,
 } from './enums/llm-gateway.enums';
+
+export { LLMRequestPriority } from './dtos/llm-gateway.dtos';

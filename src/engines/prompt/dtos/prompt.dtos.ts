@@ -1,5 +1,6 @@
 import { PromptRole, PromptType, PromptStrategy, CompressionLevel, PromptStatus } from '../enums/prompt.enums';
 import type { InteractionContextDTO } from '@engines/context';
+import type { LLMRequestPriority } from '@engines/llm-gateway';
 
 /** A single segment within a prompt (e.g., system context, memory injection, etc.). */
 export interface PromptSegment {
@@ -43,6 +44,7 @@ export interface PromptBuildContext {
   strategy: PromptStrategy;
   compressionLevel?: CompressionLevel;
   maxTokens?: number;
+  priority?: LLMRequestPriority;
   metadata?: Record<string, unknown>;
 }
 

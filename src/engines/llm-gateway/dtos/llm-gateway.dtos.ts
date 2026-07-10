@@ -13,6 +13,12 @@ export interface LLMMessage {
   name?: string;
 }
 
+export enum LLMRequestPriority {
+  CRITICAL = 'CRITICAL',      // Real-time user interactions, requires best quality/latency
+  HIGH = 'HIGH',              // Important but non-real-time operations
+  STANDARD = 'STANDARD',      // Batch processing, evaluation scenarios (can use cheaper models)
+}
+
 export interface LLMRequest {
   requestId: string;
   correlationId?: string;
@@ -26,6 +32,7 @@ export interface LLMRequest {
   maxTokens?: number;
   topP?: number;
   stopSequences?: string[];
+  priority?: LLMRequestPriority;
   metadata?: Record<string, unknown>;
   timeoutMs?: number;
   cacheKey?: string;

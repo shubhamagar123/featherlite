@@ -1,11 +1,17 @@
 import type { InteractionContextDTO } from '@engines/context';
 import { PromptTemplate, PromptBuildContext } from '../dtos/prompt.dtos';
+import { LLMRequestPriority } from '@engines/llm-gateway';
 
 /**
  * Substitutes template placeholders like {{USER_NAME}} with values pulled from
  * the InteractionContextDTO. Unknown placeholders resolve to the template's
  * declared default (or a friendly '(unavailable)' marker when none exists),
  * so a missing slice never produces a broken prompt.
+ *
+ * Implements tiered context injection based on request priority:
+ * - CRITICAL: Full context (all memories, moments, detailed relationship data)
+ * - HIGH: Full context with developer prompt included
+ * - STANDARD: Reduced context (top-5 memories, top-3 moments) to minimize tokens
  */
 export class ContextInjector {
   inject(
@@ -13,7 +19,7 @@ export class ContextInjector {
     build: PromptBuildContext,
     extraTokens: Record<string, string> = {}
   ): string {
-    const dictionary = this.buildDictionary(build.conversationContext);
+    const dictionary = this.buildDictionary(build.conversationContext, build.priority);
     Object.assign(dictionary, extraTokens);
 
     return template.content.replace(/\{\{([A-Z0-9_]+)\}\}/g, (_, key: string) => {
@@ -26,7 +32,7 @@ export class ContextInjector {
     });
   }
 
-  private buildDictionary(ctx: InteractionContextDTO): Record<string, string> {
+  private buildDictionary(ctx: InteractionContextDTO, priority?: LLMRequestPriority): Record<string, string> {
     const dict: Record<string, string> = {};
 
     // User
@@ -64,17 +70,19 @@ export class ContextInjector {
     dict.RELATIONSHIP_FAMILIARITY = this.formatScore(ctx.relationship.familiarityScore);
     dict.RELATIONSHIP_INTERACTIONS = String(ctx.relationship.totalInteractions ?? 0);
 
-    // Memories
-    dict.MEMORIES = ctx.memories.items.length
-      ? ctx.memories.items
+    // Memories - tiered based on priority
+    const memories = this.selectMemories(ctx.memories.items, priority);
+    dict.MEMORIES = memories.length
+      ? memories
           .map((m, i) => `${i + 1}. [${m.type}][${m.importance}] ${m.content}`)
           .join('\n')
       : '(no relevant memories)';
     dict.MEMORY_COUNT = String(ctx.memories.count);
 
-    // Moments
-    dict.MOMENTS = ctx.moments.items.length
-      ? ctx.moments.items
+    // Moments - tiered based on priority
+    const moments = this.selectMoments(ctx.moments.items, priority);
+    dict.MOMENTS = moments.length
+      ? moments
           .map(
             (m, i) =>
               `${i + 1}. ${m.title}${m.description ? ` — ${m.description}` : ''} (${m.occurredAt})`
@@ -84,6 +92,20 @@ export class ContextInjector {
     dict.MOMENT_COUNT = String(ctx.moments.count);
 
     return dict;
+  }
+
+  private selectMemories(items: any[], priority?: LLMRequestPriority): any[] {
+    if (priority === LLMRequestPriority.STANDARD) {
+      return items.slice(0, 5);
+    }
+    return items;
+  }
+
+  private selectMoments(items: any[], priority?: LLMRequestPriority): any[] {
+    if (priority === LLMRequestPriority.STANDARD) {
+      return items.slice(0, 3);
+    }
+    return items;
   }
 
   private formatScore(score?: number): string {
