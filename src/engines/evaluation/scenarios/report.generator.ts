@@ -13,6 +13,10 @@ export class ReportGenerator {
   ): string {
     const md: string[] = [];
 
+    if (results.length === 0) {
+      return `# ${dataset.name} Report\n\n**No results available. Execute tests first.`
+    }
+
     md.push(`# ${dataset.name} Report\n`);
     md.push(`**Generated:** ${new Date().toISOString()}\n`);
     md.push(`**Type:** ${dataset.type}\n`);
@@ -104,6 +108,27 @@ export class ReportGenerator {
     dataset: ScenarioDataset,
     results: ScenarioResult[]
   ): Record<string, any> {
+    if (results.length === 0) {
+      return {
+        metadata: {
+          name: dataset.name,
+          type: dataset.type,
+          generatedAt: new Date().toISOString(),
+          datasetMetadata: dataset.metadata,
+        },
+        summary: {
+          totalScenarios: 0,
+          executedScenarios: 0,
+          passedScenarios: 0,
+          failedScenarios: 0,
+          regressionTestsPassed: 0,
+        },
+        results: [],
+        categoryMetrics: {},
+        evaluationMetrics: {},
+      };
+    }
+
     return {
       metadata: {
         name: dataset.name,
@@ -124,10 +149,27 @@ export class ReportGenerator {
     };
   }
 
+  private escapeCSVValue(value: string | number | boolean): string {
+    const str = String(value);
+    if (
+      str.includes(',') ||
+      str.includes('"') ||
+      str.includes('\n') ||
+      /^[=+\-@]/.test(str)
+    ) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  }
+
   generateCSVReport(
     _dataset: ScenarioDataset,
     results: ScenarioResult[]
   ): string {
+    if (results.length === 0) {
+      return 'No results available. Execute tests first.';
+    }
+
     const lines: string[] = [];
 
     const headers = [
@@ -158,9 +200,9 @@ export class ReportGenerator {
 
     for (const result of results) {
       const row = [
-        result.scenarioId,
-        result.datasetType,
-        result.executedAt.toISOString(),
+        this.escapeCSVValue(result.scenarioId),
+        this.escapeCSVValue(result.datasetType),
+        this.escapeCSVValue(result.executedAt.toISOString()),
         result.duration,
         result.success ? 'PASS' : 'FAIL',
         result.regressionPassed ? 'PASS' : 'FAIL',
@@ -191,6 +233,28 @@ export class ReportGenerator {
     dataset: ScenarioDataset,
     results: ScenarioResult[]
   ): string {
+    if (results.length === 0) {
+      return `<!DOCTYPE html>
+<html>
+<head>
+    <title>${dataset.name} Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 8px; }
+        h1 { color: #333; border-bottom: 3px solid #007bff; padding-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>${dataset.name}</h1>
+        <p><strong>Generated:</strong> ${new Date().toISOString()}</p>
+        <p><strong>Type:</strong> ${dataset.type}</p>
+        <p>No results available. Execute tests first.</p>
+    </div>
+</body>
+</html>`;
+    }
+
     const passed = results.filter(r => r.success).length;
     const failed = results.length - passed;
     const passRate = ((passed / results.length) * 100).toFixed(2);

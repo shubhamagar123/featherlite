@@ -162,6 +162,18 @@ export class DatasetGenerator {
         duplicated.push({
           ...scenario,
           id: `${scenario.id}-dup-${i}`,
+          expectedEvaluation: { ...scenario.expectedEvaluation },
+          expectedBehavior: { ...scenario.expectedBehavior },
+          expectedRelationshipChanges: { ...scenario.expectedRelationshipChanges },
+          expectedPromptCharacteristics: { ...scenario.expectedPromptCharacteristics },
+          expectedResponseCharacteristics: { ...scenario.expectedResponseCharacteristics },
+          regressionThresholds: { ...scenario.regressionThresholds },
+          conversationHistory: [...scenario.conversationHistory],
+          tags: [...scenario.tags],
+          expectedMemories: [...scenario.expectedMemories],
+          expectedEvents: [...scenario.expectedEvents],
+          expectedMoments: [...scenario.expectedMoments],
+          expectedNotifications: [...scenario.expectedNotifications],
         });
       }
     }

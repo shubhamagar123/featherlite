@@ -23,12 +23,18 @@ export class VoiceManager {
   private voiceSessions = new Map<string, VoiceSession>();
   private voiceChunks = new Map<string, VoiceData[]>();
   private userVoiceSessions = new Map<string, Set<string>>();
+  private static readonly MAX_BYTES_PER_SESSION = 50 * 1024 * 1024;
+  private static readonly MAX_VOICE_SESSIONS = 500;
+  private static readonly VOICE_SESSION_TIMEOUT_MS = 600000;
 
   startVoiceSession(
     userId: string,
     _sessionId: string,
     interactionId: string
   ): VoiceSession {
+    this.ensureCapacity();
+    this.cleanupInactiveSessions();
+
     const voiceSessionId = uuidv4();
     const now = new Date();
 
@@ -83,6 +89,12 @@ export class VoiceManager {
 
     if (!session) {
       return null;
+    }
+
+    if (session.totalBytes + chunk.audio.length > VoiceManager.MAX_BYTES_PER_SESSION) {
+      throw new Error(
+        `Voice session size limit exceeded: ${VoiceManager.MAX_BYTES_PER_SESSION} bytes`
+      );
     }
 
     const chunks = this.voiceChunks.get(voiceSessionId) || [];
@@ -184,22 +196,35 @@ export class VoiceManager {
     };
   }
 
-  cleanupInactiveSessions(timeoutMs: number): string[] {
+  cleanupInactiveSessions(timeoutMs?: number): string[] {
     const now = new Date();
-    const inactiveSessions: string[] = [];
+    const timeout = timeoutMs || VoiceManager.VOICE_SESSION_TIMEOUT_MS;
+    const removed: string[] = [];
 
     for (const [sessionId, session] of this.voiceSessions.entries()) {
       const inactiveTime = now.getTime() - session.lastChunkAt.getTime();
 
-      if (inactiveTime > timeoutMs && session.isActive) {
-        this.endVoiceSession(sessionId);
-        inactiveSessions.push(sessionId);
-
-        this.logger.debug(`Voice session marked inactive: ${sessionId}`);
+      if (inactiveTime > timeout) {
+        this.removeVoiceSession(sessionId);
+        removed.push(sessionId);
+        this.logger.debug(`Voice session cleaned up: ${sessionId}`);
       }
     }
 
-    return inactiveSessions;
+    return removed;
+  }
+
+  ensureCapacity(): void {
+    if (this.voiceSessions.size >= VoiceManager.MAX_VOICE_SESSIONS) {
+      const oldest = Array.from(this.voiceSessions.entries()).sort(
+        (a, b) => a[1].lastChunkAt.getTime() - b[1].lastChunkAt.getTime()
+      )[0];
+
+      if (oldest) {
+        this.removeVoiceSession(oldest[0]);
+        this.logger.debug(`Removed oldest voice session to maintain capacity: ${oldest[0]}`);
+      }
+    }
   }
 
   getVoiceSessionCount(): number {

@@ -11,6 +11,9 @@ export class StreamingManager {
   private logger = createLogger(this.constructor.name);
   private streams = new Map<string, StreamingContext>();
   private interactionStreams = new Map<string, Set<string>>();
+  private static readonly MAX_TOKENS_PER_STREAM = 100000;
+  private static readonly MAX_STREAMS = 1000;
+  private static readonly STREAM_TIMEOUT_MS = 300000;
 
   startStream(
     userId: string,
@@ -19,6 +22,12 @@ export class StreamingManager {
     companionId: string,
     metadata?: Record<string, any>
   ): StreamingContext {
+    this.cleanupExpiredStreams();
+
+    if (this.streams.size >= StreamingManager.MAX_STREAMS) {
+      throw new Error('Maximum concurrent streams exceeded');
+    }
+
     const streamId = uuidv4();
 
     const stream: StreamingContext = {
@@ -130,6 +139,10 @@ export class StreamingManager {
       return null;
     }
 
+    if (stream.tokens.length + tokens.length > StreamingManager.MAX_TOKENS_PER_STREAM) {
+      throw new Error(`Stream token limit exceeded: ${StreamingManager.MAX_TOKENS_PER_STREAM}`);
+    }
+
     for (let i = 0; i < tokens.length; i++) {
       const tokenId = uuidv4();
       const newToken: StreamToken = {
@@ -197,6 +210,27 @@ export class StreamingManager {
     }
 
     return stream;
+  }
+
+  cleanupExpiredStreams(): string[] {
+    const now = new Date();
+    const expired: string[] = [];
+
+    for (const [streamId, stream] of this.streams.entries()) {
+      const age = now.getTime() - stream.startedAt.getTime();
+
+      if (
+        age > StreamingManager.STREAM_TIMEOUT_MS &&
+        (stream.status === StreamingStatus.COMPLETED ||
+          stream.status === StreamingStatus.ERROR ||
+          stream.status === StreamingStatus.CANCELLED)
+      ) {
+        this.removeStream(streamId);
+        expired.push(streamId);
+      }
+    }
+
+    return expired;
   }
 
   removeStream(streamId: string): boolean {

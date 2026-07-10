@@ -52,6 +52,15 @@ export class SocketGateway {
           return next(new Error('Invalid token'));
         }
 
+        if (
+          !payload.userId ||
+          !payload.sessionId ||
+          !payload.deviceId ||
+          !payload.accessToken
+        ) {
+          return next(new Error('Invalid token payload: missing required fields'));
+        }
+
         socket.data.authPayload = payload;
         next();
       } catch (error) {
@@ -181,17 +190,23 @@ export class SocketGateway {
       .getConfigManager()
       .getHeartbeatInterval();
 
+    let isSocketActive = true;
+
     const heartbeatInterval = setInterval(() => {
-      if (socket.connected) {
-        socket.emit('heartbeat:ping', { timestamp: new Date() });
-      } else {
+      if (!isSocketActive || !socket.connected) {
         clearInterval(heartbeatInterval);
+        return;
       }
+      socket.emit('heartbeat:ping', { timestamp: new Date() });
     }, interval);
 
-    socket.on('disconnect', (_reason: string) => {
+    const disconnectHandler = () => {
+      isSocketActive = false;
       clearInterval(heartbeatInterval);
-    });
+    };
+
+    socket.once('disconnect', disconnectHandler);
+    socket.on('error', disconnectHandler);
   }
 
   private handleInteractionStart(
