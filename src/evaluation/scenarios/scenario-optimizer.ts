@@ -139,27 +139,30 @@ export class ScenarioOptimizer {
     ]);
 
     const quickCheckScenarios: EvaluationScenario[] = [];
+    const scenarioSet = new Set<string>();
 
     // First pass: add one representative from each cluster
     for (const cluster of clusters) {
       if (cluster.representative) {
         quickCheckScenarios.push(cluster.representative);
+        scenarioSet.add(cluster.representative.id);
       }
     }
 
     // Second pass: for critical types with multiple difficulties, add additional representatives
     for (const cluster of clusters) {
       if (
-        criticalTypes.has(cluster.type as any) &&
+        criticalTypes.has(cluster.type as string) &&
         cluster.duplicates &&
         cluster.duplicates.length > 0
       ) {
         // Add one more scenario from critical types if available
         const additional = cluster.duplicates.find(
-          s => !quickCheckScenarios.includes(s)
+          s => !scenarioSet.has(s.id)
         );
         if (additional) {
           quickCheckScenarios.push(additional);
+          scenarioSet.add(additional.id);
         }
       }
     }
@@ -175,12 +178,11 @@ export class ScenarioOptimizer {
   /**
    * Create optimized evaluation result combining deduplication + quick-check.
    * Returns both the full deduplicated suite and quick-check subset.
+   * Quick-check is generated from full original scenarios to ensure comprehensive critical type coverage.
    */
   optimizeScenarios(scenarios: EvaluationScenario[]): OptimizationResult {
     const deduplicationResult = this.deduplicateScenarios(scenarios);
-    const quickCheckScenarios = this.generateQuickCheckVariant(
-      deduplicationResult.deduplicatedScenarios
-    );
+    const quickCheckScenarios = this.generateQuickCheckVariant(scenarios);
 
     return {
       ...deduplicationResult,

@@ -20,6 +20,7 @@ import { ContextInjector } from '../builders/context-injector';
 import { TokenBudgeter } from '../builders/token-budgeter';
 import { AssemblyStrategyRegistry } from '../strategies/strategy-registry';
 import { PromptAnalyticsRecorder } from '../analytics/prompt.analytics';
+import { LLMRequestPriority } from '@engines/llm-gateway';
 
 export interface PromptComposerDeps {
   templates: TemplateRegistry;
@@ -254,6 +255,6 @@ export class PromptComposer implements IPromptComposer {
 
   private shouldIncludeDeveloperPrompt(context: PromptBuildContext): boolean {
     if (!context.priority) return true;
-    return context.priority !== 'STANDARD';
+    return context.priority !== LLMRequestPriority.STANDARD;
   }
 }

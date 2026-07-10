@@ -1,4 +1,4 @@
-import type { InteractionContextDTO } from '@engines/context';
+import type { InteractionContextDTO, MemoryContextItem } from '@engines/context';
 import { PromptTemplate, PromptBuildContext } from '../dtos/prompt.dtos';
 import { LLMRequestPriority } from '@engines/llm-gateway';
 
@@ -14,6 +14,8 @@ import { LLMRequestPriority } from '@engines/llm-gateway';
  * - STANDARD: Reduced context (top-5 memories, top-3 moments) to minimize tokens
  */
 export class ContextInjector {
+  private static readonly PLACEHOLDER_PATTERN = /\{\{([A-Z0-9_]+)\}\}/g;
+
   inject(
     template: PromptTemplate,
     build: PromptBuildContext,
@@ -22,7 +24,7 @@ export class ContextInjector {
     const dictionary = this.buildDictionary(build.conversationContext, build.priority);
     Object.assign(dictionary, extraTokens);
 
-    return template.content.replace(/\{\{([A-Z0-9_]+)\}\}/g, (_, key: string) => {
+    return template.content.replace(ContextInjector.PLACEHOLDER_PATTERN, (_, key: string) => {
       if (Object.prototype.hasOwnProperty.call(dictionary, key)) {
         return dictionary[key] ?? '';
       }
@@ -77,7 +79,7 @@ export class ContextInjector {
           .map((m, i) => `${i + 1}. [${m.type}][${m.importance}] ${m.content}`)
           .join('\n')
       : '(no relevant memories)';
-    dict.MEMORY_COUNT = String(ctx.memories.count);
+    dict.MEMORY_COUNT = String(memories.length);
 
     // Moments - tiered based on priority
     const moments = this.selectMoments(ctx.moments.items, priority);
@@ -89,12 +91,12 @@ export class ContextInjector {
           )
           .join('\n')
       : '(no recent moments)';
-    dict.MOMENT_COUNT = String(ctx.moments.count);
+    dict.MOMENT_COUNT = String(moments.length);
 
     return dict;
   }
 
-  private selectMemories(items: any[], priority?: LLMRequestPriority): any[] {
+  private selectMemories(items: MemoryContextItem[], priority?: LLMRequestPriority): MemoryContextItem[] {
     if (priority === LLMRequestPriority.STANDARD) {
       return items.slice(0, 5);
     }

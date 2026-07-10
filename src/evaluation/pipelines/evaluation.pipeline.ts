@@ -259,7 +259,11 @@ export class EvaluationPipelineExecutor {
         promptVersion
       );
 
-      return this.detectRegressions(report || { datasetType, modelProvider, scenarios: results.length });
+      if (!report) {
+        throw new Error('Failed to generate report from quick-check execution');
+      }
+
+      return this.detectRegressions(report);
     } catch (error) {
       this.logger.error(`Quick-check execution failed: ${error}`);
       throw error;

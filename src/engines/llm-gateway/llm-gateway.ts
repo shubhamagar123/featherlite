@@ -132,7 +132,6 @@ export class LLMGateway implements ILLMGateway {
     const provider = this.providers.get(selection.value)!;
     const startTime = Date.now();
     let accumulatedContent = '';
-    let totalTokens = 0;
 
     for await (const chunk of provider.stream(optimizedRequest)) {
       accumulatedContent += chunk.delta;
@@ -140,6 +139,7 @@ export class LLMGateway implements ILLMGateway {
 
       if (chunk.finished) {
         // Emit terminal event when stream completes
+        const completionTokens = Math.ceil(accumulatedContent.length / 4);
         const response: LLMResponse = {
           requestId: optimizedRequest.requestId,
           provider: chunk.provider,
@@ -149,8 +149,8 @@ export class LLMGateway implements ILLMGateway {
           finishReason: chunk.finishReason ?? LLMFinishReason.STOP,
           usage: {
             promptTokens: 0,
-            completionTokens: 0,
-            totalTokens,
+            completionTokens,
+            totalTokens: completionTokens,
           },
           cost: {
             promptCostUsd: 0,
