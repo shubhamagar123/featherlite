@@ -21,7 +21,6 @@ export class RelationshipService extends BaseService implements IRelationshipSer
         userId: dto.userId,
         companionId: dto.companionId,
         status: (dto.status || 'ACTIVE') as any,
-        level: (dto.level || 'ACQUAINTANCE') as any,
         affectionScore: 0,
         trustScore: 0,
         familiarityScore: 0,
@@ -91,7 +90,6 @@ export class RelationshipService extends BaseService implements IRelationshipSer
 
       const relationship = await this.relationshipRepository.update(relationshipId, {
         status: dto.status as any,
-        level: dto.level as any,
         affectionScore: dto.affectionScore,
         trustScore: dto.trustScore,
         familiarityScore: dto.familiarityScore,

@@ -171,7 +171,7 @@ ConversationContextDTO
 ├── user          UserContextSlice          (id, username, displayName, role, tz, lang)
 ├── companion     CompanionContextSlice     (state, mood, expression, gesture, location, outfit, availability)
 ├── world         WorldContextSlice         (scene, timeOfDay, season, weather, activity, lighting, ambient, mood)
-├── relationship  RelationshipContextSlice  (status, level, affection, trust, familiarity, interactions)
+├── relationship  RelationshipContextSlice  (status, affection, trust, familiarity, interactions, daysSinceFirstInteraction, conversationFrequencyPerWeek)
 ├── memories      MemoryContextSlice        (count, items[{ id, type, importance, content }])
 ├── moments       MomentsContextSlice       (count, items[{ id, title, description, significance, occurredAt }])
 └── meta          ContextMeta               (timezone, referenceDate, degraded[], providers[], buildDurationMs)

@@ -50,10 +50,6 @@ export class RelationshipRepository extends BaseRepository<
     return this.findMany({ status }, options);
   }
 
-  async findByLevel(level: string, options?: FindManyOptions): Promise<Relationship[]> {
-    return this.findMany({ level }, options);
-  }
-
   async findByHighestAffection(userId: string, limit: number = 10): Promise<Relationship[]> {
     return this.findMany(
       { userId },

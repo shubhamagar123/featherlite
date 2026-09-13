@@ -157,8 +157,7 @@ Companion (1) ──→ VoiceSession (*)
 **Key Fields:**
 - `userId` (FK) - User in relationship
 - `companionId` (FK) - Companion in relationship
-- `status` - Active, paused, ended
-- `level` - Stranger to intimate (6 levels)
+- `status` - Active, paused, ended (lifecycle only — not a closeness measure)
 - `affectionScore` - -100 to 100
 - `trustScore` - 0 to 100
 - `familiarityScore` - 0 to 100
@@ -177,7 +176,6 @@ Relationship (1) ──→ Companion (1)
 - `userId` - All relationships for user
 - `companionId` - All users with this companion
 - `status` - Active/ended relationships
-- `level` - Relationship depth queries
 - `lastInteractionAt` - Recent activity
 - `deletedAt` - Soft delete filtering
 
@@ -189,7 +187,7 @@ Relationship (1) ──→ Companion (1)
 **Scaling Notes:**
 - Frequently accessed - cache in Redis
 - Scores updated on every interaction
-- Query by level for personalization
+- Closeness is computed at read time from firstInteractionAt/totalInteractions/scores — there is no stored level to query by
 
 ---
 

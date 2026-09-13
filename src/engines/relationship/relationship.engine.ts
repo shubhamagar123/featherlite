@@ -30,6 +30,7 @@ import {
   RelationshipState,
   RelationshipSnapshot,
   RelationshipDimension,
+  RelationshipClosenessSignals,
   InteractionEvaluationInput,
   InteractionEvaluationResult,
   RelationshipEvent,
@@ -37,7 +38,6 @@ import {
 import {
   RelationshipDimensionType,
   RelationshipStatus,
-  RelationshipPhase,
   GrowthStrategyType,
 } from './enums/relationship.enums';
 import { IRelationshipEngine } from './interfaces/relationship-engine.interface';
@@ -98,8 +98,7 @@ export class RelationshipEngine implements IRelationshipEngine {
       const createResult = await this.relationshipService.createRelationship({
         userId,
         companionId,
-        status: RelationshipStatus.INITIATED,
-        level: RelationshipPhase.INITIAL_ATTRACTION,
+        status: RelationshipStatus.ACTIVE,
       });
 
       if (createResult.isFailure) {
@@ -120,8 +119,7 @@ export class RelationshipEngine implements IRelationshipEngine {
           {
             userId,
             companionId,
-            status: RelationshipStatus.INITIATED,
-            phase: RelationshipPhase.INITIAL_ATTRACTION,
+            status: RelationshipStatus.ACTIVE,
           },
           context
         );
@@ -293,7 +291,6 @@ export class RelationshipEngine implements IRelationshipEngine {
       userId: dto.userId,
       companionId: dto.companionId,
       status: snapshot.status,
-      phase: snapshot.phase,
       snapshot,
       timeline: {
         userId: dto.userId,
@@ -380,15 +377,44 @@ export class RelationshipEngine implements IRelationshipEngine {
       userId: dto.userId,
       companionId: dto.companionId,
       status: this.parseStatus(dto.status),
-      phase: this.parsePhase(dto.level),
       dimensions,
       overallHealth,
       trajectory: 0,
       strengths,
       vulnerabilities,
       nextGrowthOpportunity: this.recommendGrowthOpportunity(vulnerabilities[0]),
+      closeness: this.computeClosenessSignals(dto, now),
       createdAt: dto.createdAt,
       updatedAt: lastUpdated,
+    };
+  }
+
+  /**
+   * Derive emergent closeness signals from persisted interaction history.
+   * Always computed live against `now` — nothing here is stored, named, or
+   * staged. This is the sole source of "how close is this relationship"
+   * information; there is no discrete level/phase/tier anywhere.
+   */
+  private computeClosenessSignals(dto: RelationshipDTO, now: Date): RelationshipClosenessSignals {
+    const totalInteractions = dto.totalInteractions ?? 0;
+
+    if (!dto.firstInteractionAt) {
+      return {
+        daysSinceFirstInteraction: 0,
+        totalInteractions,
+        conversationFrequencyPerWeek: 0,
+      };
+    }
+
+    const msSinceFirst = now.getTime() - dto.firstInteractionAt.getTime();
+    const daysSinceFirstInteraction = Math.max(0, Math.floor(msSinceFirst / (24 * 60 * 60 * 1000)));
+    const weeksSinceFirst = Math.max(1 / 7, daysSinceFirstInteraction / 7);
+    const conversationFrequencyPerWeek = this.roundScore(totalInteractions / weeksSinceFirst);
+
+    return {
+      daysSinceFirstInteraction,
+      totalInteractions,
+      conversationFrequencyPerWeek,
     };
   }
 
@@ -400,13 +426,12 @@ export class RelationshipEngine implements IRelationshipEngine {
   private projectSnapshotToUpdate(
     previous: RelationshipSnapshot,
     next: RelationshipSnapshot
-  ): { affectionScore?: number; trustScore?: number; familiarityScore?: number; status?: string; level?: string } {
+  ): { affectionScore?: number; trustScore?: number; familiarityScore?: number; status?: string } {
     const patch: {
       affectionScore?: number;
       trustScore?: number;
       familiarityScore?: number;
       status?: string;
-      level?: string;
     } = {};
 
     const nextAffection = this.roundScore(next.dimensions[RelationshipDimensionType.EMOTIONAL_DEPTH].value);
@@ -421,7 +446,6 @@ export class RelationshipEngine implements IRelationshipEngine {
     if (nextTrust !== prevTrust) patch.trustScore = nextTrust;
     if (nextFamiliarity !== prevFamiliarity) patch.familiarityScore = nextFamiliarity;
     if (next.status !== previous.status) patch.status = next.status;
-    if (next.phase !== previous.phase) patch.level = next.phase;
 
     return patch;
   }
@@ -430,14 +454,7 @@ export class RelationshipEngine implements IRelationshipEngine {
     if (raw && (Object.values(RelationshipStatus) as string[]).includes(raw)) {
       return raw as RelationshipStatus;
     }
-    return RelationshipStatus.INITIATED;
-  }
-
-  private parsePhase(raw: string | undefined | null): RelationshipPhase {
-    if (raw && (Object.values(RelationshipPhase) as string[]).includes(raw)) {
-      return raw as RelationshipPhase;
-    }
-    return RelationshipPhase.INITIAL_ATTRACTION;
+    return RelationshipStatus.ACTIVE;
   }
 
   private recommendGrowthOpportunity(weakest: RelationshipDimensionType): GrowthStrategyType {
@@ -542,7 +559,6 @@ export class RelationshipEngine implements IRelationshipEngine {
         userId,
         companionId,
         status: snapshot.status,
-        phase: snapshot.phase,
         overallHealth: snapshot.overallHealth,
         trajectory: snapshot.trajectory,
       },

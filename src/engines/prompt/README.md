@@ -27,7 +27,7 @@ Its only responsibility is to **orchestrate prompt construction**, never to **ca
 - Inject world context (scene, weather, time of day, mood)
 - Inject companion context (state, mood, location, availability)
 - Inject user context (username, preferences, language)
-- Inject relationship context (level, affection, trust)
+- Inject relationship context (closeness signals, affection, trust) — closeness is read live from raw signals (days known, interaction frequency), never a stored level/tier
 - Inject memory context (critical memories ranked by importance)
 - Inject moments context (recent shared moments)
 - Inject conversation context (conversation history)

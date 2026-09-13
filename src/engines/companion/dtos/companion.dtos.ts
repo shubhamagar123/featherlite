@@ -87,8 +87,6 @@ export interface CompanionProfileDTO {
 export interface CompanionSignals {
   /** Relationship affection score (-100..100), if known. */
   affection?: number;
-  /** Relationship level label, if known. */
-  relationshipLevel?: string;
   /** Explicit companion status override (from CompanionService). */
   statusOverride?: 'ACTIVE' | 'INACTIVE' | 'BUSY';
 }

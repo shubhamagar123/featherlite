@@ -114,8 +114,8 @@ export interface PromptPayload {
 /** Context injection point definition. */
 export interface ContextInjectionPoint {
   name: string;
-  path: string; // e.g., "user.displayName", "relationship.level"
-  placeholder: string; // e.g., "{{USER_NAME}}", "{{RELATIONSHIP_LEVEL}}"
+  path: string; // e.g., "user.displayName", "relationship.trustScore"
+  placeholder: string; // e.g., "{{USER_NAME}}", "{{RELATIONSHIP_TRUST}}"
   required: boolean;
   type: string; // e.g., "string", "number", "array"
 }

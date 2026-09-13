@@ -44,7 +44,7 @@ function makeSet(
     world: overrides.world ?? fakeProvider('world', true, { available: true }, { available: false }),
     relationship:
       overrides.relationship ??
-      fakeProvider('relationship', false, { available: true, level: 'FRIEND' }, { available: false }),
+      fakeProvider('relationship', false, { available: true, daysSinceFirstInteraction: 30 }, { available: false }),
     memory:
       overrides.memory ??
       fakeProvider('memory', false, { available: true, count: 1, items: [{}] }, { available: false, count: 0, items: [] }),

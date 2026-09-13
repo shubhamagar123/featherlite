@@ -64,13 +64,15 @@ export class ContextInjector {
     dict.WORLD_AMBIENT_SOUND = String(ctx.world.ambientSound ?? '');
     dict.WORLD_MOOD = String(ctx.world.mood ?? '');
 
-    // Relationship
+    // Relationship — closeness is read live from raw signals, never a stored
+    // level/phase/tier label (see RelationshipContextSlice).
     dict.RELATIONSHIP_STATUS = String(ctx.relationship.status ?? '');
-    dict.RELATIONSHIP_LEVEL = String(ctx.relationship.level ?? '');
     dict.RELATIONSHIP_AFFECTION = this.formatScore(ctx.relationship.affectionScore);
     dict.RELATIONSHIP_TRUST = this.formatScore(ctx.relationship.trustScore);
     dict.RELATIONSHIP_FAMILIARITY = this.formatScore(ctx.relationship.familiarityScore);
     dict.RELATIONSHIP_INTERACTIONS = String(ctx.relationship.totalInteractions ?? 0);
+    dict.RELATIONSHIP_DAYS_KNOWN = String(ctx.relationship.daysSinceFirstInteraction ?? 0);
+    dict.RELATIONSHIP_FREQUENCY = String(ctx.relationship.conversationFrequencyPerWeek ?? 0);
 
     // Memories - tiered based on priority
     const memories = this.selectMemories(ctx.memories.items, priority);

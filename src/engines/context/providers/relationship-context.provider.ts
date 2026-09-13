@@ -35,11 +35,12 @@ export class RelationshipContextProvider implements IContextProvider<Relationshi
       return Result.success({
         available: true,
         status: snapshot.status,
-        level: snapshot.phase,
         affectionScore: snapshot.overallHealth,
         trustScore: snapshot.dimensions.TRUST?.value ?? 0,
         familiarityScore: snapshot.dimensions.FAMILIARITY?.value ?? 0,
-        totalInteractions: 0,
+        totalInteractions: snapshot.closeness.totalInteractions,
+        daysSinceFirstInteraction: snapshot.closeness.daysSinceFirstInteraction,
+        conversationFrequencyPerWeek: snapshot.closeness.conversationFrequencyPerWeek,
       });
     }
 

@@ -65,7 +65,7 @@ describe('ContextEngine (integration with real providers, mocked sources)', () =
     expect(ctx.user).toMatchObject({ available: true, username: 'alice' });
     expect(ctx.companion).toMatchObject({ available: true, name: 'Kai' });
     expect(ctx.world).toMatchObject({ available: true, scene: 'LIVING_ROOM' });
-    expect(ctx.relationship).toMatchObject({ available: true, level: 'FRIEND' });
+    expect(ctx.relationship).toMatchObject({ available: true, daysSinceFirstInteraction: 30 });
     expect(ctx.memories).toMatchObject({ available: true, count: 1 });
     expect(ctx.moments).toMatchObject({ available: true, count: 1 });
     expect(ctx.meta.degraded).toEqual([]);

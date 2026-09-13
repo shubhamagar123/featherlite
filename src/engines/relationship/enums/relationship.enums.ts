@@ -14,12 +14,14 @@ export enum RelationshipDimensionType {
   RESPECT = 'RESPECT',
 }
 
-/** Relationship status. */
+/**
+ * Relationship lifecycle status. This is NOT a closeness measure — it only
+ * tracks whether the relationship is currently active, paused, or ended.
+ * How close a relationship is gets read live from raw signals (see
+ * RelationshipClosenessSignals) rather than encoded as a named stage here.
+ */
 export enum RelationshipStatus {
-  INITIATED = 'INITIATED',
-  DEVELOPING = 'DEVELOPING',
-  ESTABLISHED = 'ESTABLISHED',
-  DEEPENING = 'DEEPENING',
+  ACTIVE = 'ACTIVE',
   PAUSED = 'PAUSED',
   ENDED = 'ENDED',
 }
@@ -64,13 +66,4 @@ export enum GrowthStrategyType {
   EMOTIONAL_VULNERABILITY = 'EMOTIONAL_VULNERABILITY',
   CONSISTENCY = 'CONSISTENCY',
   CONFLICT_RESOLUTION = 'CONFLICT_RESOLUTION',
-}
-
-/** Relationship phase. */
-export enum RelationshipPhase {
-  INITIAL_ATTRACTION = 'INITIAL_ATTRACTION',
-  EXPLORATION = 'EXPLORATION',
-  DEEPENING = 'DEEPENING',
-  STABILIZATION = 'STABILIZATION',
-  RESILIENCE = 'RESILIENCE',
 }

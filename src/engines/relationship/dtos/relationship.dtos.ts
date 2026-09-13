@@ -4,7 +4,6 @@ import {
   RelationshipEventType,
   InteractionQuality,
   GrowthStrategyType,
-  RelationshipPhase,
 } from '../enums/relationship.enums';
 import type { InteractionContextDTO } from '@engines/context';
 
@@ -39,19 +38,40 @@ export interface RelationshipTimeline {
   totalImpact: number;
 }
 
+/**
+ * Raw, emergent signals that describe how close a relationship is. These are
+ * always derived at read time from underlying data (interaction history,
+ * elapsed time) — never stored, named, or staged. There is intentionally no
+ * discrete "level"/"phase"/"tier" anywhere in this engine: closeness is a
+ * continuous read, not a state machine.
+ *
+ * Consumers that want to describe "how close" a relationship is (e.g. the
+ * prompt engine) should combine these signals with the continuous dimension
+ * values below, and with the memory count from the Memory engine's own
+ * context slice (this engine does not duplicate that count).
+ */
+export interface RelationshipClosenessSignals {
+  /** Days elapsed since the first recorded interaction (0 if unknown). */
+  daysSinceFirstInteraction: number;
+  /** Total number of interactions recorded for this relationship. */
+  totalInteractions: number;
+  /** Average interactions per week since the first interaction. */
+  conversationFrequencyPerWeek: number;
+}
+
 /** Snapshot of relationship at a point in time. */
 export interface RelationshipSnapshot {
   id: string;
   userId: string;
   companionId: string;
   status: RelationshipStatus;
-  phase: RelationshipPhase;
   dimensions: Record<RelationshipDimensionType, RelationshipDimension>;
   overallHealth: number; // 0-100 (average across all dimensions)
   trajectory: number; // -2 to +2 (overall trend)
   strengths: RelationshipDimensionType[]; // Highest dimensions
   vulnerabilities: RelationshipDimensionType[]; // Lowest dimensions
   nextGrowthOpportunity: GrowthStrategyType;
+  closeness: RelationshipClosenessSignals;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -108,16 +128,9 @@ export interface RelationshipState {
   userId: string;
   companionId: string;
   status: RelationshipStatus;
-  phase: RelationshipPhase;
   snapshot: RelationshipSnapshot;
   timeline: RelationshipTimeline;
   activeStrategies: EvolutionStrategy[];
-  nextMilestone?: {
-    name: string;
-    targetDimension: RelationshipDimensionType;
-    targetValue: number;
-    estimatedDate: Date;
-  };
   metadata: {
     createdAt: Date;
     updatedAt: Date;

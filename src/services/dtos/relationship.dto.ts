@@ -1,9 +1,13 @@
+// NOTE: There is deliberately no "level"/"phase"/"tier" field here.
+// Closeness is an emergent read computed at query time from firstInteractionAt,
+// totalInteractions, and the scores below — never a persisted named stage.
+// See src/engines/relationship/README.md.
+
 export interface RelationshipDTO {
   id: string;
   userId: string;
   companionId: string;
   status: string;
-  level: string;
   affectionScore: number;
   trustScore: number;
   familiarityScore: number;
@@ -18,12 +22,10 @@ export interface CreateRelationshipDTO {
   userId: string;
   companionId: string;
   status?: string;
-  level?: string;
 }
 
 export interface UpdateRelationshipDTO {
   status?: string;
-  level?: string;
   affectionScore?: number;
   trustScore?: number;
   familiarityScore?: number;
@@ -33,7 +35,6 @@ export interface RelationshipMetadataDTO {
   id: string;
   companionId: string;
   status: string;
-  level: string;
   affectionScore: number;
   lastInteractionAt?: Date;
 }

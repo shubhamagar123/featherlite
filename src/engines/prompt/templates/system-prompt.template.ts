@@ -14,7 +14,7 @@ export const SYSTEM_PROMPT_TEMPLATES: PromptTemplate[] = [
       'Current state: {{COMPANION_STATE}}, mood: {{COMPANION_MOOD}}.\n' +
       'World: {{WORLD_SCENE}} during {{WORLD_TIME_OF_DAY}} in {{WORLD_SEASON}}.\n' +
       'Weather: {{WORLD_WEATHER}}. Activity: {{WORLD_ACTIVITY}}.\n' +
-      'Relationship level: {{RELATIONSHIP_LEVEL}}. Trust: {{RELATIONSHIP_TRUST}}. Affection: {{RELATIONSHIP_AFFECTION}}.\n' +
+      'Relationship: known {{RELATIONSHIP_DAYS_KNOWN}} days, {{RELATIONSHIP_INTERACTIONS}} conversations. Trust: {{RELATIONSHIP_TRUST}}. Affection: {{RELATIONSHIP_AFFECTION}}.\n' +
       'Rules:\n{{RULES}}',
     variables: [
       { name: 'COMPANION_NAME', type: 'context', required: true, description: 'Companion display name' },
@@ -26,7 +26,8 @@ export const SYSTEM_PROMPT_TEMPLATES: PromptTemplate[] = [
       { name: 'WORLD_SEASON', type: 'context', required: false, description: 'Season', defaultValue: 'unspecified' },
       { name: 'WORLD_WEATHER', type: 'context', required: false, description: 'Weather', defaultValue: 'clear' },
       { name: 'WORLD_ACTIVITY', type: 'context', required: false, description: 'Companion activity', defaultValue: 'available' },
-      { name: 'RELATIONSHIP_LEVEL', type: 'context', required: false, description: 'Relationship level', defaultValue: 'acquaintance' },
+      { name: 'RELATIONSHIP_DAYS_KNOWN', type: 'context', required: false, description: 'Days since first interaction', defaultValue: '0' },
+      { name: 'RELATIONSHIP_INTERACTIONS', type: 'context', required: false, description: 'Total interaction count', defaultValue: '0' },
       { name: 'RELATIONSHIP_TRUST', type: 'context', required: false, description: 'Trust score 0-1', defaultValue: '0.5' },
       { name: 'RELATIONSHIP_AFFECTION', type: 'context', required: false, description: 'Affection 0-1', defaultValue: '0.5' },
       { name: 'RULES', type: 'rule', required: true, description: 'Compiled rules list' },
@@ -48,7 +49,7 @@ export const SYSTEM_PROMPT_TEMPLATES: PromptTemplate[] = [
       '- Companion state: {{COMPANION_STATE}} (mood: {{COMPANION_MOOD}})\n' +
       '- World: {{WORLD_SCENE}} · {{WORLD_TIME_OF_DAY}} · {{WORLD_SEASON}} · {{WORLD_WEATHER}}\n' +
       '- Activity: {{WORLD_ACTIVITY}}\n' +
-      '- Relationship: level {{RELATIONSHIP_LEVEL}}, trust {{RELATIONSHIP_TRUST}}, affection {{RELATIONSHIP_AFFECTION}}\n' +
+      '- Relationship: known {{RELATIONSHIP_DAYS_KNOWN}} days across {{RELATIONSHIP_INTERACTIONS}} conversations, trust {{RELATIONSHIP_TRUST}}, affection {{RELATIONSHIP_AFFECTION}}\n' +
       '- Memories:\n{{MEMORIES}}\n' +
       '- Recent moments:\n{{MOMENTS}}\n' +
       'Rules:\n{{RULES}}',
@@ -62,7 +63,8 @@ export const SYSTEM_PROMPT_TEMPLATES: PromptTemplate[] = [
       { name: 'WORLD_SEASON', type: 'context', required: false, description: 'Season', defaultValue: 'unspecified' },
       { name: 'WORLD_WEATHER', type: 'context', required: false, description: 'Weather', defaultValue: 'clear' },
       { name: 'WORLD_ACTIVITY', type: 'context', required: false, description: 'Companion activity', defaultValue: 'available' },
-      { name: 'RELATIONSHIP_LEVEL', type: 'context', required: false, description: 'Relationship level', defaultValue: 'acquaintance' },
+      { name: 'RELATIONSHIP_DAYS_KNOWN', type: 'context', required: false, description: 'Days since first interaction', defaultValue: '0' },
+      { name: 'RELATIONSHIP_INTERACTIONS', type: 'context', required: false, description: 'Total interaction count', defaultValue: '0' },
       { name: 'RELATIONSHIP_TRUST', type: 'context', required: false, description: 'Trust score 0-1', defaultValue: '0.5' },
       { name: 'RELATIONSHIP_AFFECTION', type: 'context', required: false, description: 'Affection 0-1', defaultValue: '0.5' },
       { name: 'MEMORIES', type: 'context', required: false, description: 'Memory injection', defaultValue: '(none)' },

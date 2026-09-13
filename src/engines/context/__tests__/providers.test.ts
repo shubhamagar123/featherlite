@@ -81,7 +81,7 @@ describe('RelationshipContextProvider', () => {
     const provider = new RelationshipContextProvider(mockRelationshipEngine());
     expect(provider.required).toBe(false);
     const result = await provider.provide(REQUEST);
-    expect(result.value).toMatchObject({ available: true, level: 'FRIEND', affectionScore: 42 });
+    expect(result.value).toMatchObject({ available: true, daysSinceFirstInteraction: 30, affectionScore: 42 });
   });
 
   it('treats a missing relationship as a normal empty slice (not a failure)', async () => {

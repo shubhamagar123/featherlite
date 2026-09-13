@@ -7,7 +7,12 @@
  * - Apply decay for inactive periods
  * - Maintain change history for each dimension
  * - Calculate trends from historical data
- * - Update relationship status based on health
+ *
+ * Note: `status` (ACTIVE/PAUSED/ENDED) is a lifecycle flag, not a closeness
+ * measure, and is only ever changed by explicit user/system action (see
+ * RelationshipService.pauseRelationship/resumeRelationship/endRelationship).
+ * This updater never mutates it based on dimension health — doing so would
+ * just reintroduce a staged-progression system under a different name.
  */
 
 import { IResult, Result } from '@services/types/result.type';
@@ -19,11 +24,7 @@ import {
   RelationshipEvent,
 } from '../dtos/relationship.dtos';
 import { IRelationshipUpdater } from '../interfaces/relationship-updater.interface';
-import {
-  RelationshipDimensionType,
-  RelationshipStatus,
-  RelationshipPhase,
-} from '../enums/relationship.enums';
+import { RelationshipDimensionType } from '../enums/relationship.enums';
 import { RelationshipRules } from '../rules/relationship.rules';
 
 export class RelationshipUpdater implements IRelationshipUpdater {
@@ -172,44 +173,5 @@ export class RelationshipUpdater implements IRelationshipUpdater {
     const sorted = [...dimensions].sort((a, b) => b.value - a.value);
     snapshot.strengths = sorted.slice(0, 3).map(d => d.type);
     snapshot.vulnerabilities = sorted.slice(-3).map(d => d.type);
-
-    this.updateRelationshipStatus(snapshot);
-    this.updateRelationshipPhase(snapshot);
   }
-
-  private updateRelationshipStatus(snapshot: RelationshipSnapshot): void {
-    const health = snapshot.overallHealth;
-
-    if (health < 20) {
-      snapshot.status = RelationshipStatus.ENDED;
-    } else if (health < 40) {
-      snapshot.status = RelationshipStatus.PAUSED;
-    } else if (health < 60) {
-      snapshot.status = RelationshipStatus.DEVELOPING;
-    } else if (health < 80) {
-      snapshot.status = RelationshipStatus.ESTABLISHED;
-    } else {
-      snapshot.status = RelationshipStatus.DEEPENING;
-    }
-  }
-
-  private updateRelationshipPhase(snapshot: RelationshipSnapshot): void {
-    const health = snapshot.overallHealth;
-    const trustLevel = snapshot.dimensions[RelationshipDimensionType.TRUST]?.value || 0;
-    const emotionalDepth =
-      snapshot.dimensions[RelationshipDimensionType.EMOTIONAL_DEPTH]?.value || 0;
-
-    if (health < 40) {
-      snapshot.phase = RelationshipPhase.INITIAL_ATTRACTION;
-    } else if (health < 50 || emotionalDepth < 30) {
-      snapshot.phase = RelationshipPhase.EXPLORATION;
-    } else if (health < 70 || trustLevel < 50) {
-      snapshot.phase = RelationshipPhase.DEEPENING;
-    } else if (emotionalDepth >= 60 && trustLevel >= 70) {
-      snapshot.phase = RelationshipPhase.RESILIENCE;
-    } else {
-      snapshot.phase = RelationshipPhase.STABILIZATION;
-    }
-  }
-
 }

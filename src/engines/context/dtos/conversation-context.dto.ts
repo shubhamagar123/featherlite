@@ -90,14 +90,24 @@ export interface WorldContextSlice {
   mood?: string;
 }
 
+/**
+ * Relationship closeness is deliberately NOT represented as a named
+ * level/phase/tier here. Consumers that want to describe "how close" a
+ * relationship is should read the raw signals below (and combine them with
+ * the memory count from the Memory context slice) rather than branch on a
+ * stored label.
+ */
 export interface RelationshipContextSlice {
   available: boolean;
   status?: string;
-  level?: string;
   affectionScore?: number;
   trustScore?: number;
   familiarityScore?: number;
   totalInteractions?: number;
+  /** Days elapsed since the first recorded interaction. */
+  daysSinceFirstInteraction?: number;
+  /** Average interactions per week since the first interaction. */
+  conversationFrequencyPerWeek?: number;
 }
 
 export interface MemoryContextItem {

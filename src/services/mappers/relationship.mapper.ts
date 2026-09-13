@@ -8,7 +8,6 @@ export class RelationshipMapper {
       userId: relationship.userId,
       companionId: relationship.companionId,
       status: relationship.status,
-      level: relationship.level,
       affectionScore: relationship.affectionScore,
       trustScore: relationship.trustScore,
       familiarityScore: relationship.familiarityScore,
@@ -25,7 +24,6 @@ export class RelationshipMapper {
       id: relationship.id,
       companionId: relationship.companionId,
       status: relationship.status,
-      level: relationship.level,
       affectionScore: relationship.affectionScore,
       lastInteractionAt: relationship.lastInteractionAt || undefined,
     };

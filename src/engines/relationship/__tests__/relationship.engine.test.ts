@@ -6,7 +6,7 @@
  * - Event application and impact calculation
  * - Decay application over time
  * - Trend calculation
- * - Status and phase updates
+ * - Status stability (lifecycle status is not derived from dimension health)
  * - Growth factor scoring
  * - Integration with evaluator and updater
  */
@@ -21,7 +21,6 @@ import {
   RelationshipEventType,
   InteractionQuality,
   RelationshipStatus,
-  RelationshipPhase,
 } from '../enums/relationship.enums';
 import {
   RelationshipSnapshot,
@@ -270,38 +269,15 @@ describe('RelationshipEngine', () => {
     });
   });
 
-  describe('Status and Phase Updates', () => {
-    it('should set status to DEVELOPING for health 40-60', async () => {
+  describe('Status stability', () => {
+    it('does not change status based on dimension health (status is lifecycle-only)', async () => {
       const snapshot = createTestSnapshot();
+      snapshot.status = RelationshipStatus.ACTIVE;
 
-      // Set dimensions to values that average to ~50
-      for (const dim of Object.values(RelationshipDimensionType)) {
-        snapshot.dimensions[dim].value = 50;
-      }
-      snapshot.overallHealth = 50;
-
-      const event: RelationshipEvent = {
-        id: 'event-1',
-        type: RelationshipEventType.CONVERSATION,
-        timestamp: new Date(),
-        description: 'Status test',
-        affectedDimensions: [RelationshipDimensionType.TRUST],
-        impact: {
-          [RelationshipDimensionType.TRUST]: 1,
-        } as Record<RelationshipDimensionType, number>,
-      };
-
-      const result = await updater.applyEvent(snapshot, event);
-      expect(result.value?.status).toBe(RelationshipStatus.DEVELOPING);
-    });
-
-    it('should set status to ENDED for health < 20', async () => {
-      const snapshot = createTestSnapshot();
-
+      // Drive health very low via a conflict event.
       for (const dim of Object.values(RelationshipDimensionType)) {
         snapshot.dimensions[dim].value = 10;
       }
-
       snapshot.overallHealth = 10;
 
       const event: RelationshipEvent = {
@@ -316,7 +292,10 @@ describe('RelationshipEngine', () => {
       };
 
       const result = await updater.applyEvent(snapshot, event);
-      expect(result.value?.status).toBe(RelationshipStatus.ENDED);
+      // Status is a lifecycle flag (ACTIVE/PAUSED/ENDED) only changed by
+      // explicit action — never silently derived from dimension health,
+      // which would just reintroduce a staged-progression system.
+      expect(result.value?.status).toBe(RelationshipStatus.ACTIVE);
     });
   });
 
@@ -384,7 +363,7 @@ describe('RelationshipEngine', () => {
         user: { available: true },
         companion: { available: true },
         world: { available: true },
-        relationship: { available: true, level: 'DEEPENING' },
+        relationship: { available: true, conversationFrequencyPerWeek: 6 },
         memories: { available: true, count: 10, items: [] },
         moments: { available: true, count: 5, items: [] },
         meta: {
@@ -424,14 +403,18 @@ function createTestSnapshot(): RelationshipSnapshot {
     id: 'test-rel-1',
     userId: 'user-1',
     companionId: 'companion-1',
-    status: RelationshipStatus.DEVELOPING,
-    phase: RelationshipPhase.EXPLORATION,
+    status: RelationshipStatus.ACTIVE,
     dimensions,
     overallHealth: 30,
     trajectory: 0,
     strengths: [],
     vulnerabilities: Object.values(RelationshipDimensionType).slice(0, 3),
     nextGrowthOpportunity: 'CONVERSATION_QUALITY' as any,
+    closeness: {
+      daysSinceFirstInteraction: 14,
+      totalInteractions: 8,
+      conversationFrequencyPerWeek: 4,
+    },
     createdAt: new Date(),
     updatedAt: new Date(),
   };

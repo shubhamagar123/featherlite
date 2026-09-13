@@ -14,6 +14,7 @@ export type {
   RelationshipState,
   RelationshipSnapshot,
   RelationshipDimension,
+  RelationshipClosenessSignals,
   RelationshipEvent,
   RelationshipTimeline,
   InteractionEvaluationInput,
@@ -32,5 +33,4 @@ export {
   InteractionQuality,
   DimensionChange,
   GrowthStrategyType,
-  RelationshipPhase,
 } from './enums/relationship.enums';

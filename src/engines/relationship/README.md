@@ -1,7 +1,7 @@
 # Relationship Engine
 
 The **Relationship Engine** models the evolving relationship between a user and
-a companion across **15 independent dimensions** without a single score.
+a companion across **12 independent dimensions** without a single score.
 
 It is NOT an AI engine. It is NOT a scoring engine. It is a pure state-management
 engine that tracks multi-dimensional relationship evolution based on deterministic,
@@ -12,10 +12,12 @@ memories, time, interactions, repairs, and consistency.
 
 ## Core Principle
 
-> There must never be a single relationship score. Relationships evolve across
-> multiple independent dimensions: Trust, Comfort, Playfulness, Emotional Depth,
-> Communication Style, Shared Rituals, Shared Memories, Boundaries, Familiarity,
-> Reliability, Inside Jokes, Supportiveness, Respect, Openness.
+> There must never be a single relationship score, and there must never be a
+> named, staged "relationship level" (no `STRANGER → ACQUAINTANCE → ... →
+> BEST_FRIEND` ladder, no `phase`, no `tier`, no `milestone`). Relationships
+> evolve across multiple independent dimensions: Trust, Comfort, Playfulness,
+> Emotional Depth, Communication Style, Shared Rituals, Shared Memories,
+> Boundaries, Familiarity, Reliability, Supportiveness, Respect.
 
 Each dimension:
 - Ranges from 0–100 (not a binary score)
@@ -23,12 +25,39 @@ Each dimension:
 - Tracks change history and trend
 - Evolves independently based on event impact
 
+### Closeness is read, not stored
+
+How "close" a relationship is is never encoded as a discrete stage. Instead,
+`RelationshipSnapshot.closeness` (a `RelationshipClosenessSignals`) is
+**computed live at query time** from raw, underlying data:
+
+- `daysSinceFirstInteraction` — elapsed time since `firstInteractionAt`
+- `totalInteractions` — count of recorded interactions
+- `conversationFrequencyPerWeek` — `totalInteractions` normalized over elapsed
+  time
+
+Nothing here is persisted as a label. Two reads of the same relationship a
+minute apart can return different `daysSinceFirstInteraction` values because
+it is derived against `now`, not cached. Consumers that want a richer picture
+of closeness (e.g. the prompt engine) combine these signals with the
+continuous dimension values above and, separately, the consented memory count
+from the Memory engine's own context slice — this engine does not duplicate
+that count.
+
+`status` (`ACTIVE` / `PAUSED` / `ENDED`) is a **lifecycle** flag, not a
+closeness measure: it only changes via explicit action
+(`RelationshipService.pauseRelationship` / `resumeRelationship` /
+`endRelationship`), never as a side effect of dimension health. Deriving a
+"DEVELOPING → ESTABLISHED → DEEPENING" status ladder from a health score would
+just reintroduce the same staged-progression anti-pattern under a different
+name, so the updater deliberately leaves `status` untouched.
+
 ---
 
 ## Responsibilities
 
 1. **Create relationships** — Initialize new relationship state between user and
-   companion with all 15 dimensions at starting values.
+   companion with all 12 dimensions at starting values.
 
 2. **Load relationships** — Retrieve existing relationship state with full
    snapshot and timeline.
@@ -68,7 +97,7 @@ Main entry point. Methods:
 #### IRelationshipContext
 Provides calculation context and growth rules:
 - `getCalculationContext(userId, companionId, currentDate)` → RelationshipCalculationContext
-- `getGrowthRules()` → DimensionGrowthRule[] (all 15)
+- `getGrowthRules()` → DimensionGrowthRule[] (all 12)
 - `getGrowthRule(dimension)` → DimensionGrowthRule (specific)
 
 #### IRelationshipEvaluator
@@ -163,7 +192,7 @@ sequenceDiagram
 
 ```
 RelationshipSnapshot
-├── Dimensions (15 independent)
+├── Dimensions (12 independent)
 │   ├── Trust: 75 ↗️ (trend +1)
 │   ├── Comfort: 82 ↗️ (trend +2)
 │   ├── Playfulness: 60 → (trend 0)
@@ -174,14 +203,14 @@ RelationshipSnapshot
 │   ├── Boundaries: 72 → (trend 0)
 │   ├── Familiarity: 88 ↗️ (trend +1)
 │   ├── Reliability: 80 ↗️ (trend +1)
-│   ├── Inside Jokes: 45 ↗️ (trend +1)
 │   ├── Supportiveness: 77 ↗️ (trend +1)
-│   ├── Respect: 81 → (trend 0)
-│   └── Openness: 68 ↗️ (trend +1)
+│   └── Respect: 81 → (trend 0)
 ├── overallHealth: 72 (average of all dimensions)
 ├── trajectory: +1 (improving overall)
 ├── strengths: [Familiarity, Shared Memories, Comfort]
-└── vulnerabilities: [Playfulness, Inside Jokes, Shared Rituals]
+├── vulnerabilities: [Playfulness, Shared Rituals, Respect]
+└── closeness: { daysSinceFirstInteraction: 214, totalInteractions: 156, conversationFrequencyPerWeek: 5.1 }
+   (always read live — never stored as a named level/phase/tier)
 ```
 
 ---
@@ -205,7 +234,7 @@ src/engines/relationship/
 │   ├── relationship-updater.interface.ts
 │   └── relationship-strategy.interface.ts
 ├── enums/
-│   └── relationship.enums.ts         # 15 dimensions, statuses, event types
+│   └── relationship.enums.ts         # 12 dimensions, lifecycle status, event types
 ├── dtos/
 │   └── relationship.dtos.ts          # 13 comprehensive data structures
 ├── relationship.engine.ts            # Main orchestrator
@@ -225,16 +254,26 @@ Multi-dimensional view at a point in time:
   id: string;
   userId: string;
   companionId: string;
-  status: RelationshipStatus;
-  phase: RelationshipPhase;
+  status: RelationshipStatus;             // ACTIVE / PAUSED / ENDED — lifecycle only
   dimensions: Record<RelationshipDimensionType, RelationshipDimension>;
   overallHealth: number;  // 0-100 average
   trajectory: number;     // -2 to +2 overall trend
   strengths: DimensionType[];
   vulnerabilities: DimensionType[];
   nextGrowthOpportunity: GrowthStrategyType;
+  closeness: RelationshipClosenessSignals; // computed live — never stored
   createdAt: Date;
   updatedAt: Date;
+}
+```
+
+### RelationshipClosenessSignals
+Emergent, always-live read of "how close" a relationship is:
+```typescript
+{
+  daysSinceFirstInteraction: number;
+  totalInteractions: number;
+  conversationFrequencyPerWeek: number;
 }
 ```
 

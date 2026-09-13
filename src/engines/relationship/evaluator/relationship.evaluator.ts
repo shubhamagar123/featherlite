@@ -86,14 +86,14 @@ export class RelationshipEvaluator implements IRelationshipEvaluator {
     return Result.tryAsync(async () => {
       const memoryCount = conversationContext.memories?.count || 0;
       const momentCount = conversationContext.moments?.count || 0;
-      const relationshipLevel = conversationContext.relationship?.level || 'INITIAL_ATTRACTION';
+      const conversationFrequencyPerWeek = conversationContext.relationship?.conversationFrequencyPerWeek || 0;
 
       return {
         conversationQuality: this.scoreConversationQuality(conversationContext),
         conversationFrequency: this.scoreConversationFrequency(userId, companionId),
         meaningfulEvents: Math.min(10, momentCount),
         sharedMemories: Math.min(10, Math.ceil(memoryCount / 2)),
-        timeConsistency: this.scoreTimeConsistency(relationshipLevel),
+        timeConsistency: this.scoreTimeConsistency(conversationFrequencyPerWeek),
         positiveInteractions: this.scorePositiveInteractions(conversationContext),
         conflictRepairs: this.scoreConflictRepairs(userId, companionId),
         overallConsistency: this.scoreOverallConsistency(userId, companionId),
@@ -157,15 +157,13 @@ export class RelationshipEvaluator implements IRelationshipEvaluator {
     return 6;
   }
 
-  private scoreTimeConsistency(relationshipLevel: string): number {
-    const levelMap: Record<string, number> = {
-      INITIAL_ATTRACTION: 3,
-      EXPLORATION: 4,
-      DEEPENING: 6,
-      STABILIZATION: 8,
-      RESILIENCE: 9,
-    };
-    return levelMap[relationshipLevel] || 5;
+  /**
+   * Score how consistently the user and companion interact, from the raw
+   * conversation frequency signal (interactions/week) rather than a named
+   * relationship stage. Frequency is clamped to a 0-10 scale.
+   */
+  private scoreTimeConsistency(conversationFrequencyPerWeek: number): number {
+    return Math.max(0, Math.min(10, Math.round(conversationFrequencyPerWeek)));
   }
 
   private scorePositiveInteractions(_context: InteractionContextDTO): number {

@@ -73,8 +73,8 @@ Production-grade PostgreSQL schema designed for a multi-million user AI companio
 
 **Companion & Relationships:**
 - `CompanionStatus` - ACTIVE, ARCHIVED, DELETED
-- `RelationshipLevel` - STRANGER to INTIMATE (6 levels)
-- `RelationshipStatus` - ACTIVE, PAUSED, ENDED
+- `RelationshipStatus` - ACTIVE, PAUSED, ENDED (lifecycle only; there is no
+  stored relationship "level" — closeness is read live from raw signals)
 
 **Conversations & Messages:**
 - `ConversationStatus` - ACTIVE, ARCHIVED, DELETED

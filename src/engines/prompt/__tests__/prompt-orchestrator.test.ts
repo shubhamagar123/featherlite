@@ -28,11 +28,12 @@ function makeContext(overrides: Partial<InteractionContextDTO> = {}): Interactio
     relationship: {
       available: true,
       status: 'ACTIVE',
-      level: 'FRIEND',
       affectionScore: 0.7,
       trustScore: 0.8,
       familiarityScore: 0.6,
       totalInteractions: 42,
+      daysSinceFirstInteraction: 90,
+      conversationFrequencyPerWeek: 3,
     },
     memories: {
       available: true,

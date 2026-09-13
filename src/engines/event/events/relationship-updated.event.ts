@@ -6,7 +6,6 @@ export interface RelationshipUpdatedPayload {
   userId: string;
   companionId: string;
   status: string;
-  phase: string;
   overallHealth: number;
   trajectory: number;
 }
@@ -41,10 +40,6 @@ export class RelationshipUpdatedEvent extends BaseDomainEvent<RelationshipUpdate
 
   getStatus(): string {
     return this.getPayload().status;
-  }
-
-  getPhase(): string {
-    return this.getPayload().phase;
   }
 
   getOverallHealth(): number {

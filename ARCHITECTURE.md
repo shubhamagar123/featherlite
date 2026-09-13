@@ -155,9 +155,12 @@ flowchart TD
 - 5 specialized managers (Expression, Gesture, Outfit, Location, Availability)
 
 #### 4c. **Relationship Engine** — User-companion relationship
-- Stores and retrieves relationship snapshots
-- Enums: RelationshipLevel (STRANGER → SOULMATE), RelationshipStatus
-- Interface contract for future business logic (decay, progression)
+- Stores and retrieves relationship snapshots across 12 independent dimensions
+- Enums: RelationshipStatus (lifecycle: ACTIVE/PAUSED/ENDED)
+- Closeness is never a stored level/phase/tier — it's read live at query time
+  from raw signals (days since first interaction, interaction frequency,
+  consented memory count) combined with the continuous dimension scores
+- Interface contract for future business logic (decay, growth strategies)
 
 #### 4d. **Memory Engine** — Memory retrieval (storage layer only)
 - Retrieves critical memories for conversation context

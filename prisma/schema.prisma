@@ -30,15 +30,6 @@ enum CompanionStatus {
   DELETED
 }
 
-enum RelationshipLevel {
-  STRANGER
-  ACQUAINTANCE
-  FRIEND
-  CLOSE_FRIEND
-  BEST_FRIEND
-  INTIMATE
-}
-
 enum RelationshipStatus {
   ACTIVE
   PAUSED
@@ -316,8 +307,12 @@ model Relationship {
   companion Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
 
   // Relationship State
+  // NOTE: There is deliberately no stored "level"/"phase"/"tier" field here.
+  // Closeness is an emergent read, computed at query time from raw signals
+  // (firstInteractionAt, totalInteractions, consented memory count, the
+  // scores below) — never a persisted named stage. See
+  // src/engines/relationship/README.md for the rationale.
   status RelationshipStatus @default(ACTIVE)
-  level RelationshipLevel @default(STRANGER)
   affectionScore Float @default(0) // -100 to 100
   trustScore Float @default(0) // 0 to 100
   familiarityScore Float @default(0) // 0 to 100
@@ -341,7 +336,6 @@ model Relationship {
   @@index([userId])
   @@index([companionId])
   @@index([status])
-  @@index([level])
   @@index([lastInteractionAt])
   @@index([deletedAt])
 }

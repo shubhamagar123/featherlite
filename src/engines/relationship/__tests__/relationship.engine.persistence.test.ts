@@ -11,7 +11,7 @@ import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { RelationshipEngine } from '../relationship.engine';
 import { RelationshipEvaluator } from '../evaluator/relationship.evaluator';
 import { RelationshipUpdater } from '../updater/relationship.updater';
-import { RelationshipDimensionType, RelationshipEventType, InteractionQuality, RelationshipStatus, RelationshipPhase } from '../enums/relationship.enums';
+import { RelationshipDimensionType, RelationshipEventType, InteractionQuality, RelationshipStatus } from '../enums/relationship.enums';
 import { RelationshipDTO, UpdateRelationshipDTO, CreateRelationshipDTO } from '@services/dtos/relationship.dto';
 import { Result, IResult } from '@services/types/result.type';
 import { NotFoundError, NotImplementedError } from '@services/exceptions';
@@ -23,8 +23,7 @@ function makeDto(overrides: Partial<RelationshipDTO> = {}): RelationshipDTO {
     id: 'rel_1',
     userId: 'user_1',
     companionId: 'comp_1',
-    status: RelationshipStatus.DEVELOPING,
-    level: RelationshipPhase.EXPLORATION,
+    status: RelationshipStatus.ACTIVE,
     affectionScore: 60,
     trustScore: 55,
     familiarityScore: 45,
@@ -118,17 +117,31 @@ describe('RelationshipEngine — persistence round-trip', () => {
     expect(allValues.every((v) => v === 30)).toBe(false);
   });
 
-  it('parses status and phase from persisted values', async () => {
-    const dto = makeDto({
-      status: RelationshipStatus.DEEPENING,
-      level: RelationshipPhase.STABILIZATION,
-    });
+  it('parses status from persisted values', async () => {
+    const dto = makeDto({ status: RelationshipStatus.PAUSED });
     const { service } = makeFakeService(dto);
     const engine = new RelationshipEngine({ relationshipService: service, evaluator, updater });
 
     const result = await engine.getSnapshot('user_1', 'comp_1');
-    expect(result.value?.status).toBe(RelationshipStatus.DEEPENING);
-    expect(result.value?.phase).toBe(RelationshipPhase.STABILIZATION);
+    expect(result.value?.status).toBe(RelationshipStatus.PAUSED);
+  });
+
+  it('computes closeness signals live from firstInteractionAt and totalInteractions (never a stored stage)', async () => {
+    const firstInteractionAt = new Date('2025-01-01');
+    const now = new Date('2025-01-15'); // 14 days later
+    const dto = makeDto({ firstInteractionAt, totalInteractions: 4 });
+    const { service } = makeFakeService(dto);
+    const engine = new RelationshipEngine({ relationshipService: service, evaluator, updater });
+
+    jest.useFakeTimers().setSystemTime(now);
+    try {
+      const result = await engine.getSnapshot('user_1', 'comp_1');
+      expect(result.value?.closeness.daysSinceFirstInteraction).toBe(14);
+      expect(result.value?.closeness.totalInteractions).toBe(4);
+      expect(result.value?.closeness.conversationFrequencyPerWeek).toBeCloseTo(2, 1);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('projects updated dimensions back to aggregate scores on recordEvent', async () => {

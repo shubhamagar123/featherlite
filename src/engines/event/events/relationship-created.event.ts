@@ -6,7 +6,6 @@ export interface RelationshipCreatedPayload {
   userId: string;
   companionId: string;
   status: string;
-  phase: string;
 }
 
 export class RelationshipCreatedEvent extends BaseDomainEvent<RelationshipCreatedPayload> {
@@ -34,9 +33,5 @@ export class RelationshipCreatedEvent extends BaseDomainEvent<RelationshipCreate
 
   getStatus(): string {
     return this.getPayload().status;
-  }
-
-  getPhase(): string {
-    return this.getPayload().phase;
   }
 }
