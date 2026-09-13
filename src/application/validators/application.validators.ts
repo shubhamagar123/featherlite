@@ -37,6 +37,16 @@ export const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
 });
 
+// OTP Auth Validators (phone/email + code — no password field)
+export const requestOtpCodeSchema = z.object({
+  identifier: z.string().min(3, 'Phone number or email is required').max(255),
+});
+
+export const verifyOtpCodeSchema = z.object({
+  identifier: z.string().min(3, 'Phone number or email is required').max(255),
+  code: z.string().regex(/^\d{6}$/, 'Code must be 6 digits'),
+});
+
 // User Validators
 export const createUserSchema = z.object({
   email: emailSchema,

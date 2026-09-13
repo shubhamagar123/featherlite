@@ -9,6 +9,10 @@ import { registerRelationshipRoutes } from './relationship.routes';
 import { registerMomentsRoutes } from './moments.routes';
 import { registerNotificationRoutes } from './notification.routes';
 import { registerSettingsRoutes } from './settings.routes';
+import { registerPresenceRoutes } from './presence.routes';
+import { registerConversationV1Routes } from './conversation.routes';
+import { registerPlannerRoutes } from './planner.routes';
+import { registerNudgeRoutes } from './nudge.routes';
 import { createLogger } from '@utils/logger';
 
 const logger = createLogger('RoutesV1');
@@ -32,14 +36,18 @@ export function registerV1Routes(app: Application): void {
   // World & Interaction routes
   registerWorldRoutes(app);
   registerInteractionRoutes(app);
+  registerPresenceRoutes(app);
+  registerConversationV1Routes(app);
 
   // Data routes
   registerMemoryRoutes(app);
   registerRelationshipRoutes(app);
   registerMomentsRoutes(app);
+  registerPlannerRoutes(app);
+  registerNudgeRoutes(app);
 
   // Notification routes
   registerNotificationRoutes(app);
 
-  logger.info('✅ All v1 routes registered (10 modules, 45+ endpoints)');
+  logger.info('✅ All v1 routes registered (14 modules, 55+ endpoints)');
 }

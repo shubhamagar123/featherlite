@@ -197,25 +197,60 @@ flowchart TD
 
 ---
 
-### Layer 5: Interaction (Future)
+### Layer 5: Interaction
 
 **Responsibility**: HTTP layer, request/response mapping.
 
-**Not yet implemented** — no controllers, no routes, no Express integration.
+**Implemented** — Express controllers and routes under `src/controllers/` +
+`src/routes/v1/`, following the Controller → Application Service →
+Engine/Repository pattern already used by the pre-existing auth/memory/
+moments controllers. New in this pass:
 
-**Future structure**:
 ```
-src/routes/
-├── companion/
-├── memory/
-├── conversation/
+src/routes/v1/
+├── auth.routes.v2.ts        # + POST /request-code, /verify-code (OTP, no password)
+├── presence.routes.ts       # GET /presence/resolve (Context Engine only)
+├── conversation.routes.ts   # POST /conversations/:id/messages (Conversation Engine)
+│                             # GET  /conversations/:id/events (SSE: kai:speaking_start/
+│                             #      end, video:state_change)
+├── planner.routes.ts        # CRUD /planner/events
+├── nudge.routes.ts          # CRUD /nudges/preferences
 └── ...
 
 src/controllers/
-├── companionController.ts
-├── memoryController.ts
+├── auth.controller.ts        # + requestCode, verifyCode
+├── presence.controller.ts
+├── conversation.controller.ts
+├── planner.controller.ts
+├── nudge.controller.ts
 └── ...
+
+src/application/services/
+├── auth.application.service.ts    # + requestOtpCode, verifyOtpCode (Redis-backed)
+├── presence.application.service.ts
+├── conversation.application.service.ts
+├── planner.application.service.ts
+└── nudge.application.service.ts
 ```
+
+New controllers use `src/utils/response.ts` (`sendOk`/`sendCreated`/
+`sendNoContent`) for success responses and throw `AppError` subclasses
+(`src/utils/error.ts`) for failures, letting `errorHandlerMiddleware` format
+every error response — no try/catch or response-shaping logic inside a
+controller method.
+
+Known scope boundaries carried over from this pass, not fixed here:
+- The OTP flow issues sessions via the same token mechanism
+  `AuthApplicationService.createSession` already used, which predates this
+  work and is not verifiable by the existing Firebase-only `authenticate`
+  middleware — wiring one token format end-to-end is a separate follow-up.
+- The SSE event bus (`src/services/realtime/conversation-event-bus.service.ts`)
+  is in-process only; nothing yet calls `publish()` for kai:speaking_start/end
+  or video:state_change — that's for whichever component drives TTS/video
+  state (future work) to wire in.
+- A pre-existing, separate `src/api/*/*.routes.ts` + `mountApi()` layer
+  (legacy) is still mounted alongside `src/routes/v1/` + `registerV1Routes()`
+  (current) — see `src/api/index.ts`. New work goes in the latter.
 
 ---
 
@@ -604,12 +639,39 @@ database models. Each layer has its own types.
 
 ## Next Steps
 
-1. **Implement Memory Extraction Engine business logic** (entity extraction, scoring)
-2. **Implement Memory Engine** (bridge to Memory Service)
-3. **Build Conversation Engine** (consume Context Engine exclusively)
-4. **Add HTTP layer** (Express controllers, routes)
-5. **Integrate AI** (LLM provider, inference, caching)
+### Done
+
+1. ✅ **Memory Extraction Engine business logic** (entity extraction, classification,
+   importance scoring) — `src/engines/memory-extraction/`. Deterministic heuristics
+   reused from the Memory Engine's existing components; no LLM logic yet (see
+   Layer 6 below). The engine's only output is a `MemoryExtractionResultDTO`
+   proposal — it holds no repository/service dependency and cannot persist.
+   Persistence is gated by an explicit consent event, handled entirely by
+   `MemoryService.persistMemoryCandidate` (`src/services/memory/memory.service.ts`).
+2. ✅ **Conversation Engine** (consumes Context Engine exclusively) —
+   `src/engines/conversation/`. Builds prompts via the Prompt Engine, calls the
+   LLM Gateway, and runs the extraction-propose / consent-gate-persist memory
+   flow across turns (see `src/engines/conversation/README.md`).
+3. 🚧 **HTTP layer (Layer 5: Interaction)** — in progress, `src/routes/v1/` +
+   `src/controllers/`. Landed so far: Prisma schema + repositories for
+   OTP-based phone/email login (`User.phoneNumber`) and for Planner Events /
+   Nudge Preferences. Controllers and routes for auth OTP, presence
+   resolution, conversation messages, the live-conversation-state stream, and
+   Planner/Nudge CRUD are the remaining work — see the in-progress checklist
+   in this session's notes; this line will be updated to ✅ once those land.
+
+### Remaining
+
+4. **Implement Memory Engine** (bridge to Memory Service; ranking, recall
+   scoring, decay — the retrieval side is separate from the Extraction Engine
+   above, which only decides what's worth remembering)
+5. **Integrate AI** (real LLM provider wiring beyond the existing LLM Gateway
+   scaffold — inference, caching, streaming end-to-end)
 6. **Add response serialization** (Presentation layer)
+7. **Test infrastructure**: a large fraction of `tests/**/*.spec.ts` currently
+   fails to type-check (pre-existing, unrelated to the engines above) — the
+   test suite needs a pass to bring it back in line with the current service/
+   application-layer shapes before it can be trusted as a regression gate.
 
 ---
 

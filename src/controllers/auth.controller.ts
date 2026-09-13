@@ -5,9 +5,12 @@ import { ApplicationContext } from '@application/dtos/application.dtos';
 import {
   firebaseTokenSchema,
   refreshTokenSchema,
+  requestOtpCodeSchema,
+  verifyOtpCodeSchema,
   validate,
 } from '@application/validators/application.validators';
 import { asyncHandler } from '@api/index';
+import { sendOk } from '@utils/response';
 
 /**
  * Auth Controller
@@ -164,5 +167,39 @@ export class AuthController extends ControllerBase {
       this.logRequestError('POST', '/api/v1/auth/refresh', error, { traceId });
       this.error(res, error, traceId);
     }
+  });
+
+  /**
+   * POST /api/v1/auth/request-code
+   * Request an OTP code for phone/email login. No password field — the
+   * request body only ever carries an identifier.
+   *
+   * Unauthenticated by design (you can't require login to log in). Errors
+   * are thrown, not caught here, and flow through asyncHandler to the
+   * global errorHandlerMiddleware.
+   */
+  requestCode = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    this.logRequest('POST', '/api/v1/auth/request-code');
+
+    const { identifier } = validate<{ identifier: string }>(req.body, requestOtpCodeSchema);
+    const result = await this.authService.requestOtpCode(identifier);
+
+    sendOk(res, result);
+  });
+
+  /**
+   * POST /api/v1/auth/verify-code
+   * Verify an OTP code and issue a session. No password field.
+   */
+  verifyCode = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    this.logRequest('POST', '/api/v1/auth/verify-code');
+
+    const { identifier, code } = validate<{ identifier: string; code: string }>(
+      req.body,
+      verifyOtpCodeSchema
+    );
+    const token = await this.authService.verifyOtpCode(identifier, code);
+
+    sendOk(res, token);
   });
 }

@@ -173,6 +173,18 @@ enum DeviceStatus {
   DISABLED
 }
 
+enum PlannerEventStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum NudgeFrequency {
+  IMMEDIATE
+  DAILY
+  WEEKLY
+}
+
 // ============================================================================
 // USERS TABLE
 // Purpose: Stores user account information and authentication details.
@@ -187,6 +199,7 @@ model User {
   username String @unique
   passwordHash String?
   firebaseUid String? @unique
+  phoneNumber String? @unique // OTP-based phone login; no password required
 
   // Profile
   firstName String?
@@ -215,6 +228,8 @@ model User {
   devices Device[]
   voiceSessions VoiceSession[]
   analyticsEvents AnalyticsEvent[]
+  plannerEvents PlannerEvent[]
+  nudgePreferences NudgePreference[]
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -224,6 +239,7 @@ model User {
 
   @@index([email])
   @@index([username])
+  @@index([phoneNumber])
   @@index([firebaseUid])
   @@index([status])
   @@index([createdAt])
@@ -274,6 +290,7 @@ model Companion {
   voiceSessions VoiceSession[]
   scenes Scene[]
   messages Message[]
+  plannerEvents PlannerEvent[]
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -782,6 +799,69 @@ model Moment {
   @@index([significance])
   @@index([occurredAt])
   @@index([isPublic])
+  @@index([deletedAt])
+}
+
+// ============================================================================
+// PLANNER EVENT TABLE
+// Purpose: User-scheduled events/reminders, optionally tied to a companion
+// (e.g. "Kai will bring this up"). Independent of Moment (which records
+// something that already happened); a PlannerEvent is forward-looking.
+// Relationships: Many planner events per user; companion is optional.
+// ============================================================================
+
+model PlannerEvent {
+  id String @id @default(cuid())
+
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  companionId String?
+  companion Companion? @relation(fields: [companionId], references: [id], onDelete: SetNull)
+
+  title String
+  description String? @db.Text
+  scheduledFor DateTime
+  status PlannerEventStatus @default(SCHEDULED)
+
+  metadata String? @db.Text // JSON for extension
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime? // Soft delete
+
+  @@index([userId])
+  @@index([companionId])
+  @@index([scheduledFor])
+  @@index([status])
+  @@index([deletedAt])
+}
+
+// ============================================================================
+// NUDGE PREFERENCE TABLE
+// Purpose: Per-user, per-nudge-type opt-in/out and delivery preferences
+// (e.g. "daily check-in nudges: on, quiet hours 22:00-08:00").
+// Relationships: Many preference rows per user, one per nudgeType.
+// ============================================================================
+
+model NudgePreference {
+  id String @id @default(cuid())
+
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  nudgeType String // e.g. "daily_checkin", "memory_followup"
+  enabled Boolean @default(true)
+  frequency NudgeFrequency @default(DAILY)
+  quietHoursStart String? // "HH:mm", local to the user's timezone
+  quietHoursEnd String? // "HH:mm"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime? // Soft delete
+
+  @@unique([userId, nudgeType])
+  @@index([userId])
   @@index([deletedAt])
 }
 

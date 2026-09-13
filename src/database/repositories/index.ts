@@ -9,3 +9,5 @@ export { MomentRepository } from './moment.repository';
 export { NotificationRepository } from './notification.repository';
 export { ProcessedEventsRepository } from './processed-events.repository';
 export { DeadLetterEventsRepository } from './dead-letter-events.repository';
+export { PlannerEventRepository } from './planner-event.repository';
+export { NudgePreferenceRepository } from './nudge-preference.repository';

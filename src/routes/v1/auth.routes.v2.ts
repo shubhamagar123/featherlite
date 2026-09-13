@@ -17,6 +17,22 @@ const controller = new AuthController();
 export function registerAuthRoutes(app: Application): void {
   const baseRoute = '/api/v1/auth';
 
+  // POST /api/v1/auth/request-code
+  // Request an OTP code for phone/email login (no password; public route)
+  app.post(
+    `${baseRoute}/request-code`,
+    rateLimiters.auth,
+    controller.requestCode
+  );
+
+  // POST /api/v1/auth/verify-code
+  // Verify an OTP code and issue a session (no password; public route)
+  app.post(
+    `${baseRoute}/verify-code`,
+    rateLimiters.auth,
+    controller.verifyCode
+  );
+
   // POST /api/v1/auth/session
   // Create session from Firebase token
   app.post(

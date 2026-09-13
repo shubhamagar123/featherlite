@@ -8,8 +8,19 @@ import {
   InvalidTokenException,
   ResourceNotFoundException,
 } from '../exceptions/application.exceptions';
+import { UnauthorizedError } from '@utils/error';
 import { UserRepository } from '@database/repositories/user.repository';
 import { getRedisClient } from '@infra/redis/redis.provider';
+import { randomInt } from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
+
+const OTP_TTL_SECONDS = 300; // 5 minutes
+const MAX_OTP_ATTEMPTS = 5;
+
+interface StoredOtp {
+  code: string;
+  attempts: number;
+}
 
 /**
  * Auth Application Service
@@ -175,6 +186,118 @@ export class AuthApplicationService extends ApplicationServiceBase {
       this.logger.error({ error }, 'Error verifying session');
       return false;
     }
+  }
+
+  /**
+   * Request an OTP code for phone/email login.
+   * Use Case: Passwordless sign-in/sign-up — the client will not present a
+   * password field, matching the product's phone/email + OTP flow.
+   *
+   * Delivery is stubbed: no SMS/email provider is wired up yet, so the code
+   * is only logged (dev/local use). Swapping in a real provider only touches
+   * this method.
+   */
+  async requestOtpCode(identifier: string): Promise<{ expiresInSeconds: number }> {
+    const masked = this.maskIdentifier(identifier);
+    this.logStart('requestOtpCode', { identifier: masked });
+
+    try {
+      const code = String(randomInt(100000, 1000000));
+      const stored: StoredOtp = { code, attempts: 0 };
+      await this.redis.setex(this.otpKey(identifier), OTP_TTL_SECONDS, JSON.stringify(stored));
+
+      // Stub delivery — logged only, never actually sent.
+      this.logger.info({ identifier: masked, code }, 'OTP code issued (stub delivery)');
+
+      this.logSuccess('requestOtpCode', { identifier: masked });
+      return { expiresInSeconds: OTP_TTL_SECONDS };
+    } catch (error) {
+      this.logError('requestOtpCode', error, { identifier: masked });
+      throw error;
+    }
+  }
+
+  /**
+   * Verify an OTP code and issue a session — no password anywhere in this
+   * flow. On success, finds or creates the User by phone/email and returns
+   * the same AuthTokenDto shape as createSession().
+   */
+  async verifyOtpCode(identifier: string, code: string): Promise<AuthTokenDto> {
+    const masked = this.maskIdentifier(identifier);
+    this.logStart('verifyOtpCode', { identifier: masked });
+
+    try {
+      const key = this.otpKey(identifier);
+      const raw = await this.redis.get(key);
+      if (!raw) {
+        throw new UnauthorizedError('Code expired or was never requested');
+      }
+
+      const stored = JSON.parse(raw) as StoredOtp;
+      if (stored.attempts >= MAX_OTP_ATTEMPTS) {
+        await this.redis.del(key);
+        throw new UnauthorizedError('Too many incorrect attempts; request a new code');
+      }
+
+      if (stored.code !== code) {
+        const updated: StoredOtp = { ...stored, attempts: stored.attempts + 1 };
+        await this.redis.setex(key, OTP_TTL_SECONDS, JSON.stringify(updated));
+        throw new UnauthorizedError('Incorrect code');
+      }
+
+      // Single-use: the code is consumed now that it has verified.
+      await this.redis.del(key);
+
+      const user = await this.findOrCreateUserByIdentifier(identifier);
+      const accessToken = this.generateAccessToken(user.id, user);
+      const refreshToken = this.generateRefreshToken(user.id);
+
+      await this.redis.setex(`auth:refresh:${user.id}`, 7 * 24 * 60 * 60, refreshToken);
+      await this.redis.setex(`auth:session:${user.id}`, 24 * 60 * 60, 'ACTIVE');
+
+      this.logSuccess('verifyOtpCode', { userId: user.id });
+
+      return {
+        accessToken,
+        refreshToken,
+        expiresIn: 3600,
+        tokenType: 'Bearer',
+      };
+    } catch (error) {
+      this.logError('verifyOtpCode', error, { identifier: masked });
+      throw error;
+    }
+  }
+
+  /**
+   * Find the user by phone or email, creating one if this is their first
+   * sign-in. `email` is a required, unique column on User, so phone-only
+   * sign-ups get a placeholder local-only address — this is a known
+   * simplification of the scaffold, not a real email.
+   */
+  private async findOrCreateUserByIdentifier(identifier: string) {
+    const isEmail = identifier.includes('@');
+    const existing = isEmail
+      ? await this.userRepository.findByEmail(identifier)
+      : await this.userRepository.findByPhoneNumber(identifier);
+    if (existing) return existing;
+
+    const username = `user_${uuidv4().slice(0, 8)}`;
+    return this.userRepository.create({
+      email: isEmail ? identifier : `${username}@otp.featherlight.local`,
+      username,
+      phoneNumber: isEmail ? undefined : identifier,
+    } as any);
+  }
+
+  private otpKey(identifier: string): string {
+    return `otp:${identifier}`;
+  }
+
+  /** Never log a full phone number or email — keep the middle masked. */
+  private maskIdentifier(identifier: string): string {
+    if (identifier.length <= 4) return '***';
+    return `${identifier.slice(0, 2)}***${identifier.slice(-2)}`;
   }
 
   /**

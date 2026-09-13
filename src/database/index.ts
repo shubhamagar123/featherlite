@@ -7,6 +7,8 @@ import { MessageRepository } from './repositories/message.repository';
 import { MemoryRepository } from './repositories/memory.repository';
 import { MomentRepository } from './repositories/moment.repository';
 import { NotificationRepository } from './repositories/notification.repository';
+import { PlannerEventRepository } from './repositories/planner-event.repository';
+import { NudgePreferenceRepository } from './repositories/nudge-preference.repository';
 
 export * from './repositories';
 export * from './transaction';
@@ -23,6 +25,8 @@ export interface DatabaseRepositories {
   memories: MemoryRepository;
   moments: MomentRepository;
   notifications: NotificationRepository;
+  plannerEvents: PlannerEventRepository;
+  nudgePreferences: NudgePreferenceRepository;
 }
 
 let cachedRepositories: DatabaseRepositories | null = null;
@@ -42,6 +46,8 @@ export function getDatabaseRepositories(): DatabaseRepositories {
     memories: new MemoryRepository(),
     moments: new MomentRepository(),
     notifications: new NotificationRepository(),
+    plannerEvents: new PlannerEventRepository(),
+    nudgePreferences: new NudgePreferenceRepository(),
   };
 
   return cachedRepositories;

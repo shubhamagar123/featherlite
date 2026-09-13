@@ -30,6 +30,10 @@ export class UserRepository extends BaseRepository<User, UserCreateInput, UserUp
     return this.findOne({ firebaseUid });
   }
 
+  async findByPhoneNumber(phoneNumber: string): Promise<User | null> {
+    return this.findOne({ phoneNumber });
+  }
+
   async findActive(options?: FindManyOptions): Promise<User[]> {
     return this.findMany({ status: 'ACTIVE' }, options);
   }
