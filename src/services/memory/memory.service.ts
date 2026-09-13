@@ -2,10 +2,11 @@ import { BaseService } from '../base/base.service';
 import { IMemoryService } from './memory.service.interface';
 import { IResult, Result } from '../types/result.type';
 import { MemoryRepository } from '@database/repositories/memory.repository';
-import { MemoryDTO, CreateMemoryDTO, UpdateMemoryDTO } from '../dtos/memory.dto';
+import { MemoryDTO, CreateMemoryDTO, UpdateMemoryDTO, ConsentEvent } from '../dtos/memory.dto';
 import { MemoryMapper } from '../mappers/memory.mapper';
 import { InputValidator } from '../validators/input.validators';
 import { NotFoundError } from '../exceptions';
+import type { MemoryExtractionResultDTO } from '@engines/memory-extraction';
 
 export class MemoryService extends BaseService implements IMemoryService {
   constructor(private readonly memoryRepository: MemoryRepository) {
@@ -121,5 +122,43 @@ export class MemoryService extends BaseService implements IMemoryService {
       this.logError(error as Error, 'Failed to increment access count');
       return Result.failure(new Error('Failed to increment access count'));
     }
+  }
+
+  /**
+   * Consent gate: the only path from a Memory Extraction Engine proposal
+   * (MemoryExtractionResultDTO) to a persisted row. The extraction engine
+   * itself never calls this — it has no reference to this service.
+   *
+   * Without a matching, granted ConsentEvent, the candidate is discarded:
+   * nothing is written, in any form. There is deliberately no "pending" or
+   * "rejected" table — a withheld candidate simply ceases to exist once this
+   * method returns.
+   */
+  async persistMemoryCandidate(
+    candidate: MemoryExtractionResultDTO,
+    consent: ConsentEvent
+  ): Promise<IResult<MemoryDTO | null>> {
+    if (!consent.granted || consent.sourceMessageId !== candidate.sourceMessageId) {
+      this.logBusinessEvent('memory_candidate_discarded', {
+        sourceMessageId: candidate.sourceMessageId,
+        granted: consent.granted,
+      });
+      return Result.success(null);
+    }
+
+    return this.createMemory({
+      userId: candidate.userId,
+      companionId: candidate.companionId,
+      type: String(candidate.memoryType),
+      importance: this.importanceBucket(candidate.importance),
+      content: candidate.content,
+    });
+  }
+
+  private importanceBucket(score: number): string {
+    if (score >= 0.75) return 'CRITICAL';
+    if (score >= 0.5) return 'SIGNIFICANT';
+    if (score >= 0.25) return 'MODERATE';
+    return 'MINOR';
   }
 }

@@ -44,13 +44,13 @@ flowchart TD
     PROMPT -->|"receives"| CTX
 
     IE -->|"extract via"| MEE["Memory Extraction Engine"]
-    MEE -->|"persist via"| ME
+    MEE -.->|"MemoryExtractionResultDTO<br/>(proposal only — NEVER persists)"| IE
 
     WE --> WS["World Service"]
     CE --> CS["Companion Service"]
     RE --> RS["Relationship Service"]
     ME --> MS["Memory Service"]
-    MEE --> MS
+    IE -->|"persist with explicit<br/>ConsentEvent"| MS
 
     WS --> DB[("PostgreSQL")]
     CS --> DB
@@ -67,20 +67,30 @@ flowchart TD
 
 ---
 
-## Diagram 2 — Memory engines flow (Extraction → Storage)
+## Diagram 2 — Memory engines flow (Extraction → Consent → Storage)
 
 ```mermaid
 flowchart LR
-    IE["Interaction Engine<br/>(Text, Voice, Activities, Presence, etc.)"]
-    MEE["Memory Extraction Engine<br/>(Decision)<br/>- Extract entities<br/>- Detect importance<br/>- Detect expiry<br/>- Categorize"]
+    IE["Interaction Engine<br/>(orchestration point)"]
+    MEE["Memory Extraction Engine<br/>(Decision — PROPOSES ONLY)<br/>- Extract entities<br/>- Detect importance<br/>- Categorize"]
+    MS["Memory Service<br/>(CRUD + consent gate)"]
     ME["Memory Engine<br/>(Storage)<br/>- Retrieve critical<br/>- Rank & serve"]
-    MS["Memory Service<br/>(CRUD)"]
 
     IE -->|"raw input"| MEE
-    MEE -->|"MemoryExtractionResultDTO"| ME
+    MEE -->|"MemoryExtractionResultDTO<br/>(returned, never persisted)"| IE
+    IE -->|"persistMemoryCandidate(candidate, ConsentEvent)"| MS
+    MS -.->|"discarded, not stored,<br/>if consent.granted is false"| VOID(( ))
     ME -->|"persist"| MS
     ME -->|"retrieve for context"| CTX["Context Engine"]
+
+    classDef forbidden fill:#c0392b,stroke:#8b0000,color:#fff
+    class VOID forbidden
 ```
+
+**The Memory Extraction Engine never has an arrow pointing at `MS` or `ME`.**
+It hands its `MemoryExtractionResultDTO` back to its caller and is done —
+persistence is a decision made entirely downstream, gated by an explicit
+`ConsentEvent`. See `src/engines/memory-extraction/README.md`.
 
 ---
 
@@ -119,11 +129,13 @@ src/engines/
 │   ├── interfaces/
 │   ├── dtos/
 │   └── memory.factory.ts
-├── memory-extraction/       # Memory decision logic
+├── memory-extraction/       # Memory decision logic — propose-only, never persists
 │   ├── interfaces/
 │   ├── dtos/
-│   ├── enums/
-│   └── memory-extraction.factory.ts
+│   ├── __tests__/
+│   ├── memory-extraction.engine.ts
+│   ├── memory-extraction.factory.ts
+│   └── README.md            # states the persistence boundary explicitly
 ├── context/                 # Context assembly (aggregation boundary)
 │   ├── interfaces/
 │   ├── dtos/
@@ -174,8 +186,13 @@ handle CRUD; engines handle business logic.
   to Prompt Orchestrator for prompt building.
 - **Context Engine** aggregates from World, Companion, Relationship, Memory,
   and Services.
-- Memory flow: Extraction Engine (decides) → Memory Engine (stores) → Service
-  (persists).
+- **Memory Extraction Engine never persists.** It has no dependency on a
+  repository or the Memory Service — its only output is a
+  `MemoryExtractionResultDTO` proposal. Turning that proposal into a stored
+  memory requires an explicit `ConsentEvent` and happens entirely inside
+  `MemoryService.persistMemoryCandidate`; a withheld or mismatched consent
+  event means the candidate is discarded, not stored in any form. See
+  `src/engines/memory-extraction/README.md`.
 
 ### 5. Graceful Degradation
 Optional providers fail without aborting. Required providers abort the build.
@@ -215,10 +232,18 @@ expect(result.isSuccess).toBe(false); // required provider failed
 
 ## Future Work
 
-1. **Memory Extraction Implementation**: Add entity extraction, importance
-   scoring, and expiry rules. (No LLM logic in scaffold.)
-2. **Memory Engine Implementation**: Bridge to Memory Service; add ranking,
+1. **Memory Extraction — LLM-based extraction**: The current
+   `MemoryExtractionEngine` reuses deterministic entity/classification/
+   importance heuristics from the Memory Engine (no LLM logic). Its
+   propose-only persistence boundary is already enforced and covered by
+   tests; a future LLM-backed extractor would sit behind the same
+   `IMemoryExtractionEngine` interface without changing that boundary.
+2. **Conversation Engine as orchestration point**: Wire
+   `MemoryExtractionEngine.extract()` → user consent prompt →
+   `MemoryService.persistMemoryCandidate()` into the (not yet built)
+   Conversation Engine, rather than each caller doing it ad hoc.
+3. **Memory Engine Implementation**: Bridge to Memory Service; add ranking,
    recall scoring, decay.
-3. **Interaction Engine Enhancement**: Implement full manager capabilities,
+4. **Interaction Engine Enhancement**: Implement full manager capabilities,
    session persistence, and event streaming.
-4. **Additional Engines**: Dream Engine, Notification Engine, etc.
+5. **Additional Engines**: Dream Engine, Notification Engine, etc.
