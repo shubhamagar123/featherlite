@@ -41,14 +41,8 @@ export function registerMemoryRoutes(app: Application): void {
     controller.getTimeline
   );
 
-  // GET /api/v1/memories/:memoryId
-  // Get memory details (requires authentication)
-  app.get(
-    `${baseRoute}/memories/:memoryId`,
-    authenticate,
-    rateLimiters.api,
-    controller.getDetails
-  );
+  // GET /api/v1/memories/:memoryId is owned by memories.routes.ts (user-scoped,
+  // ownership-checked) — not registered here to avoid a duplicate route.
 
   logger.info('✅ Memory routes registered');
 }

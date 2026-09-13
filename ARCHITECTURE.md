@@ -204,53 +204,103 @@ flowchart TD
 **Implemented** — Express controllers and routes under `src/controllers/` +
 `src/routes/v1/`, following the Controller → Application Service →
 Engine/Repository pattern already used by the pre-existing auth/memory/
-moments controllers. New in this pass:
+moments controllers. Full v1 surface as of this pass:
 
 ```
 src/routes/v1/
-├── auth.routes.v2.ts        # + POST /request-code, /verify-code (OTP, no password)
+├── auth.routes.v2.ts        # POST /request-code, /verify-code (OTP, no password;
+│                             # verify-code optionally flushes a buffered anonymous
+│                             # memory session via sessionKey)
 ├── presence.routes.ts       # GET /presence/resolve (Context Engine only)
-├── conversation.routes.ts   # POST /conversations/:id/messages (Conversation Engine)
+├── conversation.routes.ts   # POST /conversations (start)
+│                             # GET  /conversations/:id/messages (paginated history)
+│                             # POST /conversations/:id/messages (Conversation Engine)
 │                             # GET  /conversations/:id/events (SSE: kai:speaking_start/
-│                             #      end, video:state_change)
-├── planner.routes.ts        # CRUD /planner/events
-├── nudge.routes.ts          # CRUD /nudges/preferences
-└── ...
+│                             #      end, video:state_change — now actually published)
+├── planner.routes.ts        # CRUD /planner/events (title, event_date, recurrence,
+│                             # kai_suggestion_text, created_from)
+├── nudge.routes.ts          # GET/PATCH /nudges/preferences (one row per user:
+│                             # care_hydration, people_to_remember, checking_in booleans)
+├── memories.routes.ts       # GET /memories, GET/DELETE /memories/:id (user-scoped,
+│                             # ownership-checked; DELETE soft-deletes via deletedAt)
+├── privacy.routes.ts        # GET /privacy/export (synchronous full data export)
+├── billing.routes.ts        # GET /billing/status, POST /billing/subscribe
+└── user.routes.ts           # + GET/PATCH/DELETE /users/me (profile summary, updates,
+                              #   full hard-delete-with-cascade account deletion)
 
 src/controllers/
-├── auth.controller.ts        # + requestCode, verifyCode
+├── auth.controller.ts
 ├── presence.controller.ts
 ├── conversation.controller.ts
 ├── planner.controller.ts
 ├── nudge.controller.ts
-└── ...
+├── memories.controller.ts
+├── privacy.controller.ts
+├── billing.controller.ts
+└── user-me.controller.ts
 
 src/application/services/
-├── auth.application.service.ts    # + requestOtpCode, verifyOtpCode (Redis-backed)
+├── auth.application.service.ts        # + requestOtpCode, verifyOtpCode (Redis-backed)
 ├── presence.application.service.ts
-├── conversation.application.service.ts
+├── conversation.application.service.ts  # + startConversation, getMessages
 ├── planner.application.service.ts
-└── nudge.application.service.ts
+├── nudge.application.service.ts
+├── memory.application.service.ts       # + listForUser, getForUser, forgetForUser
+├── privacy.application.service.ts
+├── billing.application.service.ts      # + assertEntitled() server-side gate
+└── user.application.service.ts         # + getMe, updateMe, deleteMe
+
+src/services/billing/
+├── payment-provider.interface.ts   # IPaymentProvider — vendor-agnostic
+├── mock-payment-provider.ts        # always-succeeds mock; swap when a vendor is chosen
+└── payment-provider.factory.ts
+
+src/services/memory/
+└── anonymous-memory-buffer.service.ts  # buffer()/flush() for pre-auth memory candidates
 ```
 
 New controllers use `src/utils/response.ts` (`sendOk`/`sendCreated`/
-`sendNoContent`) for success responses and throw `AppError` subclasses
-(`src/utils/error.ts`) for failures, letting `errorHandlerMiddleware` format
-every error response — no try/catch or response-shaping logic inside a
-controller method.
+`sendNoContent`/`sendPaginated`) for success responses and throw `AppError`
+subclasses (`src/utils/error.ts`) for failures, letting `errorHandlerMiddleware`
+format every error response — no try/catch or response-shaping logic inside
+a controller method.
 
-Known scope boundaries carried over from this pass, not fixed here:
+**Conversation Engine now actually publishes live state.** `ConversationEngine
+.sendMessage()` publishes `kai:speaking_start` + `video:state_change`
+(`state: 'speaking'`) before the LLM call and `kai:speaking_end` +
+`video:state_change` (`state: 'idle'`) after (in a `finally`, so a failed
+turn still resets state) — the SSE endpoint has a real producer now, not
+just plumbing.
+
+**Billing is entitlement-gated server-side.** `BillingApplicationService
+.assertEntitled(context, feature)` throws a 403 `ForbiddenError` for a FREE
+user; any future endpoint returning voice-playback URLs or Kai access must
+call it before returning data. No such endpoint exists yet in this codebase,
+so nothing currently calls it — this is the mechanism, ready to wire in.
+
+**No relationship-closeness value is exposed as a named level anywhere in
+this layer.** `RelationshipResponseDto` carries only `state` (a plain
+string) and `metadata` — never a computed tier/phase — consistent with the
+Relationship Engine's design.
+
+Known scope boundaries, not fixed in this pass:
 - The OTP flow issues sessions via the same token mechanism
   `AuthApplicationService.createSession` already used, which predates this
   work and is not verifiable by the existing Firebase-only `authenticate`
   middleware — wiring one token format end-to-end is a separate follow-up.
-- The SSE event bus (`src/services/realtime/conversation-event-bus.service.ts`)
-  is in-process only; nothing yet calls `publish()` for kai:speaking_start/end
-  or video:state_change — that's for whichever component drives TTS/video
-  state (future work) to wire in.
+- `AnonymousMemoryBufferService.buffer()` has no caller yet — there is no
+  anonymous (pre-auth) conversation endpoint in this codebase. `flush()` is
+  wired into `verifyOtpCode(sessionKey)` and will persist anything buffered
+  once such an endpoint exists and starts calling `buffer()`.
+- `POST /billing/subscribe` goes through `MockPaymentProvider` — no real
+  payment vendor is wired up; swapping one in only touches
+  `payment-provider.factory.ts`.
 - A pre-existing, separate `src/api/*/*.routes.ts` + `mountApi()` layer
   (legacy) is still mounted alongside `src/routes/v1/` + `registerV1Routes()`
   (current) — see `src/api/index.ts`. New work goes in the latter.
+- `GET /privacy/export` is synchronous (see the service's doc comment for
+  why); if per-user data volume grows enough to risk request timeouts, swap
+  it for a queued job without changing the endpoint's shape.
 
 ---
 
@@ -652,26 +702,44 @@ database models. Each layer has its own types.
    `src/engines/conversation/`. Builds prompts via the Prompt Engine, calls the
    LLM Gateway, and runs the extraction-propose / consent-gate-persist memory
    flow across turns (see `src/engines/conversation/README.md`).
-3. 🚧 **HTTP layer (Layer 5: Interaction)** — in progress, `src/routes/v1/` +
-   `src/controllers/`. Landed so far: Prisma schema + repositories for
-   OTP-based phone/email login (`User.phoneNumber`) and for Planner Events /
-   Nudge Preferences. Controllers and routes for auth OTP, presence
-   resolution, conversation messages, the live-conversation-state stream, and
-   Planner/Nudge CRUD are the remaining work — see the in-progress checklist
-   in this session's notes; this line will be updated to ✅ once those land.
+3. ✅ **HTTP layer (Layer 5: Interaction)** — `src/routes/v1/` + `src/controllers/`.
+   Full v1 surface: OTP auth (+ anonymous-memory-buffer flush hook), presence
+   resolution, conversation start/messages/history/SSE (now with a real
+   publisher), Planner CRUD (title/event_date/recurrence/kai_suggestion_text/
+   created_from), Nudge get/update (care_hydration/people_to_remember/
+   checking_in booleans), user-scoped Memories (list/detail/forget),
+   `/users/me` (profile summary/update/full account deletion), privacy data
+   export, and billing status/subscribe behind a swappable payment-provider
+   interface. See the Layer 5 section above for the full file tree and known
+   scope boundaries.
+4. ✅ **Test infrastructure regression gate** — `tests/**/*.spec.ts` now
+   type-checks cleanly (`npx tsc --noEmit -p tsconfig.spec.json`), `npm run
+   build` is clean, and a full `npx jest` run passes 453/627 tests (up from
+   0 runnable before this pass). Fixed along the way: a hanging-request bug
+   in `authenticate`/`adminAuth`/`validate` middleware (async functions that
+   `throw`n instead of calling `next(error)`), and the test app builder being
+   wired to the wrong global error handler. Remaining failures are mostly
+   API-layer response-shape mismatches in `tests/integration/api/*.spec.ts`
+   and `tests/security/*.spec.ts` predating current DTOs — the same class of
+   cleanup already done for `tests/integration/application/*.spec.ts`, not
+   yet extended to the API-level specs.
 
 ### Remaining
 
-4. **Implement Memory Engine** (bridge to Memory Service; ranking, recall
+5. **Implement Memory Engine** (bridge to Memory Service; ranking, recall
    scoring, decay — the retrieval side is separate from the Extraction Engine
    above, which only decides what's worth remembering)
-5. **Integrate AI** (real LLM provider wiring beyond the existing LLM Gateway
+6. **Integrate AI** (real LLM provider wiring beyond the existing LLM Gateway
    scaffold — inference, caching, streaming end-to-end)
-6. **Add response serialization** (Presentation layer)
-7. **Test infrastructure**: a large fraction of `tests/**/*.spec.ts` currently
-   fails to type-check (pre-existing, unrelated to the engines above) — the
-   test suite needs a pass to bring it back in line with the current service/
-   application-layer shapes before it can be trusted as a regression gate.
+7. **Add response serialization** (Presentation layer)
+8. **API-level test cleanup**: bring `tests/integration/api/*.spec.ts` and
+   `tests/security/*.spec.ts` in line with current response shapes (same
+   exercise already completed for the application-service specs).
+9. **Wire a real payment vendor** behind `IPaymentProvider` (Razorpay/Stripe/
+   etc.) once one is chosen — `MockPaymentProvider` stands in today.
+10. **Anonymous (pre-auth) conversation entry point** — the only thing
+    missing for the memory-buffer-flush-on-signin flow to do anything; see
+    `AnonymousMemoryBufferService`.
 
 ---
 

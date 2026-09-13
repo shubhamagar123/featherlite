@@ -134,39 +134,4 @@ export class MemoryController extends ControllerBase {
       this.error(res, error, traceId);
     }
   });
-
-  /**
-   * GET /api/v1/memories/:memoryId
-   * Get memory details
-   */
-  getDetails = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const traceId = this.getTraceId(req);
-    this.logRequest('GET', '/api/v1/memories/:memoryId', { traceId });
-
-    try {
-      const { memoryId } = req.params;
-      validate({ memoryId }, z.object({ memoryId: uuidSchema }));
-
-      const user = (req.user as any);
-      if (!user) {
-        this.error(res, new Error('UNAUTHENTICATED'), traceId);
-        return;
-      }
-
-      const context: ApplicationContext = {
-        userId: user.uid,
-        userEmail: user.email,
-        userRoles: user.customClaims?.roles || [],
-        requestId: traceId,
-        traceId,
-        timestamp: new Date(),
-      };
-
-      const memory = await this.memoryService.getMemoryDetails(context, memoryId);
-      this.success(res, memory, traceId);
-    } catch (error) {
-      this.logRequestError('GET', '/api/v1/memories/:memoryId', error, { traceId });
-      this.error(res, error, traceId);
-    }
-  });
 }

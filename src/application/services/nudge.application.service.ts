@@ -1,40 +1,33 @@
 import { ApplicationServiceBase } from './application.service.base';
 import { ApplicationContext } from '../dtos/application.dtos';
-import { ConflictError, ForbiddenError, NotFoundError } from '@utils/error';
 import { NudgePreferenceRepository } from '@database/repositories/nudge-preference.repository';
 import type { NudgePreference } from '@prisma/client';
 
 export interface NudgePreferenceDto {
-  id: string;
-  userId: string;
-  nudgeType: string;
-  enabled: boolean;
-  frequency: string;
-  quietHoursStart: string | null;
-  quietHoursEnd: string | null;
-  createdAt: Date;
+  careHydration: boolean;
+  peopleToRemember: boolean;
+  checkingIn: boolean;
   updatedAt: Date;
 }
 
-export interface CreateNudgePreferenceInput {
-  nudgeType: string;
-  enabled?: boolean;
-  frequency?: 'IMMEDIATE' | 'DAILY' | 'WEEKLY';
-  quietHoursStart?: string;
-  quietHoursEnd?: string;
+export interface UpdateNudgePreferenceInput {
+  careHydration?: boolean;
+  peopleToRemember?: boolean;
+  checkingIn?: boolean;
 }
 
-export interface UpdateNudgePreferenceInput {
-  enabled?: boolean;
-  frequency?: 'IMMEDIATE' | 'DAILY' | 'WEEKLY';
-  quietHoursStart?: string;
-  quietHoursEnd?: string;
-}
+const DEFAULTS: Pick<NudgePreferenceDto, 'careHydration' | 'peopleToRemember' | 'checkingIn'> = {
+  careHydration: true,
+  peopleToRemember: true,
+  checkingIn: true,
+};
 
 /**
  * Nudge Application Service
- * CRUD for per-user, per-nudge-type delivery preferences. Thin wrapper over
- * NudgePreferenceRepository, mirroring PlannerApplicationService.
+ * Get/update a single per-user row of simple boolean toggles — one per
+ * nudge category (care_hydration, people_to_remember, checking_in), matching
+ * the three categories on the product's Notification Preferences screen.
+ * No frequency/quiet-hours sub-settings in this pass.
  */
 export class NudgeApplicationService extends ApplicationServiceBase {
   private readonly repository: NudgePreferenceRepository;
@@ -44,85 +37,50 @@ export class NudgeApplicationService extends ApplicationServiceBase {
     this.repository = new NudgePreferenceRepository();
   }
 
-  async create(
-    context: ApplicationContext,
-    input: CreateNudgePreferenceInput
-  ): Promise<NudgePreferenceDto> {
-    this.logStart('create', { userId: context.userId, nudgeType: input.nudgeType });
+  /** Returns the user's preferences, defaulted (not persisted) if none exist yet. */
+  async get(context: ApplicationContext): Promise<NudgePreferenceDto> {
+    this.logStart('get', { userId: context.userId });
 
-    const existing = await this.repository.findByUserIdAndType(context.userId, input.nudgeType);
-    if (existing) {
-      throw new ConflictError(`Nudge preference for "${input.nudgeType}" already exists`);
+    const preference = await this.repository.findByUserId(context.userId);
+    if (!preference) {
+      return { ...DEFAULTS, updatedAt: new Date() };
     }
 
-    const created = await this.repository.create({
-      user: { connect: { id: context.userId } },
-      nudgeType: input.nudgeType,
-      enabled: input.enabled ?? true,
-      frequency: input.frequency ?? 'DAILY',
-      quietHoursStart: input.quietHoursStart,
-      quietHoursEnd: input.quietHoursEnd,
-    } as any);
-
-    this.logSuccess('create', { userId: context.userId, id: created.id });
-    return this.toDto(created);
-  }
-
-  async list(context: ApplicationContext): Promise<NudgePreferenceDto[]> {
-    const preferences = await this.repository.findByUserId(context.userId);
-    return preferences.map((p) => this.toDto(p));
-  }
-
-  async getById(context: ApplicationContext, id: string): Promise<NudgePreferenceDto> {
-    const preference = await this.findOwned(context.userId, id);
+    this.logSuccess('get', { userId: context.userId });
     return this.toDto(preference);
   }
 
+  /** Creates the row with defaults + patch if it doesn't exist yet, otherwise updates it. */
   async update(
     context: ApplicationContext,
-    id: string,
     patch: UpdateNudgePreferenceInput
   ): Promise<NudgePreferenceDto> {
-    await this.findOwned(context.userId, id);
+    this.logStart('update', { userId: context.userId });
 
-    const updated = await this.repository.update(id, {
-      enabled: patch.enabled,
-      frequency: patch.frequency,
-      quietHoursStart: patch.quietHoursStart,
-      quietHoursEnd: patch.quietHoursEnd,
-    } as any);
+    const existing = await this.repository.findByUserId(context.userId);
 
-    this.logSuccess('update', { userId: context.userId, id });
-    return this.toDto(updated);
-  }
+    const result = existing
+      ? await this.repository.update(existing.id, {
+          careHydration: patch.careHydration,
+          peopleToRemember: patch.peopleToRemember,
+          checkingIn: patch.checkingIn,
+        } as any)
+      : await this.repository.create({
+          user: { connect: { id: context.userId } },
+          careHydration: patch.careHydration ?? DEFAULTS.careHydration,
+          peopleToRemember: patch.peopleToRemember ?? DEFAULTS.peopleToRemember,
+          checkingIn: patch.checkingIn ?? DEFAULTS.checkingIn,
+        } as any);
 
-  async delete(context: ApplicationContext, id: string): Promise<void> {
-    await this.findOwned(context.userId, id);
-    await this.repository.softDelete(id);
-    this.logSuccess('delete', { userId: context.userId, id });
-  }
-
-  private async findOwned(userId: string, id: string): Promise<NudgePreference> {
-    const preference = await this.repository.findById(id);
-    if (!preference) {
-      throw new NotFoundError('NudgePreference');
-    }
-    if (preference.userId !== userId) {
-      throw new ForbiddenError('You do not have access to this nudge preference');
-    }
-    return preference;
+    this.logSuccess('update', { userId: context.userId });
+    return this.toDto(result);
   }
 
   private toDto(preference: NudgePreference): NudgePreferenceDto {
     return {
-      id: preference.id,
-      userId: preference.userId,
-      nudgeType: preference.nudgeType,
-      enabled: preference.enabled,
-      frequency: preference.frequency,
-      quietHoursStart: preference.quietHoursStart,
-      quietHoursEnd: preference.quietHoursEnd,
-      createdAt: preference.createdAt,
+      careHydration: preference.careHydration,
+      peopleToRemember: preference.peopleToRemember,
+      checkingIn: preference.checkingIn,
       updatedAt: preference.updatedAt,
     };
   }

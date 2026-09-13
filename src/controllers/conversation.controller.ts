@@ -4,7 +4,7 @@ import { ConversationApplicationService } from '@application/services/conversati
 import { ApplicationContext } from '@application/dtos/application.dtos';
 import { validate } from '@application/validators/application.validators';
 import { asyncHandler } from '@utils/asyncHandler';
-import { sendOk } from '@utils/response';
+import { sendOk, sendCreated, sendPaginated } from '@utils/response';
 import { UnauthorizedError } from '@utils/error';
 import { createLogger } from '@utils/logger';
 
@@ -17,6 +17,15 @@ const sendMessageBodySchema = z.object({
   messageId: z.string().min(1).optional(),
 });
 
+const startConversationBodySchema = z.object({
+  companionId: z.string().min(1).optional(),
+});
+
+const messagesQuerySchema = z.object({
+  limit: z.coerce.number().int().positive().max(200).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
 /**
  * Conversation Controller
  * Handles sending a message (delegates to the Conversation Engine) and the
@@ -25,6 +34,65 @@ const sendMessageBodySchema = z.object({
 export class ConversationController {
   private readonly logger = createLogger('ConversationController');
   private readonly conversationService = new ConversationApplicationService();
+
+  /**
+   * POST /api/v1/conversations
+   * Start a new conversation. companionId is optional — when omitted, the
+   * user's own companion is resolved automatically.
+   */
+  startConversation = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    this.logger.info({ method: 'POST', path: '/api/v1/conversations' }, 'POST /api/v1/conversations');
+
+    const { companionId } = validate<{ companionId?: string }>(req.body, startConversationBodySchema);
+
+    const user = req.user;
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    const context: ApplicationContext = {
+      userId: user.uid,
+      userEmail: user.email,
+      userRoles: (user.customClaims?.roles as string[]) || [],
+      requestId: String(req.id ?? ''),
+      traceId: String(req.id ?? ''),
+      timestamp: new Date(),
+    };
+
+    const conversation = await this.conversationService.startConversation(context, companionId);
+    sendCreated(res, conversation);
+  });
+
+  /**
+   * GET /api/v1/conversations/:id/messages
+   * Paginated message history, backing the mid-conversation scrolled view.
+   */
+  getMessages = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    this.logger.info(
+      { method: 'GET', path: '/api/v1/conversations/:id/messages' },
+      'GET /api/v1/conversations/:id/messages'
+    );
+
+    const { id } = validate<{ id: string }>(req.params, conversationIdParamSchema);
+    const { limit, offset } = validate<{ limit: number; offset: number }>(req.query, messagesQuerySchema);
+
+    const user = req.user;
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    const context: ApplicationContext = {
+      userId: user.uid,
+      userEmail: user.email,
+      userRoles: (user.customClaims?.roles as string[]) || [],
+      requestId: String(req.id ?? ''),
+      traceId: String(req.id ?? ''),
+      timestamp: new Date(),
+    };
+
+    const { messages, total } = await this.conversationService.getMessages(context, id, limit, offset);
+    sendPaginated(res, 200, messages, total, limit, offset);
+  });
 
   /**
    * POST /api/v1/conversations/:id/messages

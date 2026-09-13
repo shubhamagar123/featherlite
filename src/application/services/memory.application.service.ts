@@ -4,6 +4,7 @@ import {
   MemoryResponseDto,
 } from '../dtos/application.dtos';
 import { ResourceNotFoundException } from '../exceptions/application.exceptions';
+import { NotFoundError, ForbiddenError } from '@utils/error';
 import { MemoryRepository } from '@database/repositories/memory.repository';
 import { getMemoryEngine, MemoryEngineHandle } from '@engines/memory/memory.factory';
 import { SearchType } from '@engines/memory/enums/memory.enums';
@@ -165,6 +166,53 @@ export class MemoryApplicationService extends ApplicationServiceBase {
       this.logError('getMemoryDetails', error, { userId: context.userId, memoryId });
       throw error;
     }
+  }
+
+  /**
+   * List consented (i.e. persisted) memories for the authenticated user,
+   * newest-consented first. Backs the Android Memories timeline.
+   */
+  async listForUser(context: ApplicationContext, limit: number = 100): Promise<MemoryResponseDto[]> {
+    this.logStart('listForUser', { userId: context.userId });
+
+    const memories = await this.memoryRepository.findByUserId(context.userId, {
+      take: limit,
+      // Memory rows are only ever created post-consent (see
+      // MemoryService.persistMemoryCandidate) — createdAt IS the consent
+      // moment, there is no separate consentedAt column.
+      orderBy: { createdAt: 'desc' },
+    });
+
+    this.logSuccess('listForUser', { userId: context.userId, count: memories.length });
+    return memories.map((m: any) => this.mapMemoryToDto(m));
+  }
+
+  /** Single memory detail, scoped to the requesting user. Backs the Memory detail view. */
+  async getForUser(context: ApplicationContext, memoryId: string): Promise<MemoryResponseDto> {
+    const memory = await this.findOwned(context.userId, memoryId);
+    return this.mapMemoryToDto(memory);
+  }
+
+  /**
+   * Soft delete ("forget this"). Sets deletedAt — the schema's existing
+   * soft-delete column — never hard-deletes a single memory; that stays
+   * reserved for full account deletion.
+   */
+  async forgetForUser(context: ApplicationContext, memoryId: string): Promise<void> {
+    await this.findOwned(context.userId, memoryId);
+    await this.memoryRepository.softDelete(memoryId);
+    this.logSuccess('forgetForUser', { userId: context.userId, memoryId });
+  }
+
+  private async findOwned(userId: string, memoryId: string) {
+    const memory = await this.memoryRepository.findById(memoryId);
+    if (!memory) {
+      throw new NotFoundError('Memory');
+    }
+    if (memory.userId !== userId) {
+      throw new ForbiddenError('You do not have access to this memory');
+    }
+    return memory;
   }
 
   private mapMemoryToDto(memory: any): MemoryResponseDto {
