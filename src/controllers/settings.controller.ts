@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { ControllerBase } from './controller.base';
 import { SettingsApplicationService } from '@application/services/settings.application.service';
 import { ApplicationContext } from '@application/dtos/application.dtos';
-import { asyncHandler } from '@api/index';
+import { asyncHandler } from '@utils/asyncHandler';
 
 /**
  * Settings Controller

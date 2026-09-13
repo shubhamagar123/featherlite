@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { ControllerBase } from './controller.base';
 import { HealthApplicationService } from '@application/services/health.application.service';
-import { asyncHandler } from '@api/index';
+import { asyncHandler } from '@utils/asyncHandler';
 
 /**
  * Health Controller

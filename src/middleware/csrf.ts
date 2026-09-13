@@ -18,7 +18,6 @@ import { AppError, ErrorCode } from '@utils/error';
 
 const CSRF_TOKEN_LENGTH = 32;
 const CSRF_HEADER = 'x-csrf-token';
-const CSRF_COOKIE = '_csrf_token';
 
 // Methods that require CSRF protection
 const CSRF_PROTECTED_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];

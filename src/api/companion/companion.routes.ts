@@ -70,7 +70,7 @@ export async function registerCompanionRoutes(app: Application): Promise<void> {
     validate(listCompanionsSchema),
     asyncHandler(async (req: Request, res: Response) => {
       const userId = req.user!.uid;
-      const { page = 1, limit = 20, status } = req.query as Record<string, any>;
+      const { page = 1, limit = 20 } = req.query as Record<string, any>;
 
       try {
         // TODO: Query CompanionRepository with pagination

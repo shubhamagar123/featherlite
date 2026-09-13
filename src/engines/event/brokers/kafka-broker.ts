@@ -2,7 +2,7 @@ import { BaseBrokerAdapter } from './broker-adapter.base';
 import { IResult, Result } from '@services/types/result.type';
 import { EventEnvelope, DomainEventPayload, EventRetryPolicy } from '../dto/event.dto';
 import { EventType, EventDispatchMode, EventStatus } from '../enums/event.enums';
-import { Kafka, Producer, Consumer, KafkaMessage } from 'kafkajs';
+import { Kafka, Producer, Consumer, Message } from 'kafkajs';
 
 interface KafkaBrokerConfig {
   brokers: string[];
@@ -89,7 +89,7 @@ export class KafkaBroker extends BaseBrokerAdapter {
 
       const startTime = Date.now();
       const topic = this.getTopicForEventType(envelope.metadata.eventType);
-      const message: KafkaMessage = {
+      const message: Message = {
         key: envelope.metadata.correlationId,
         value: Buffer.from(JSON.stringify(envelope)),
         headers: {
@@ -138,7 +138,7 @@ export class KafkaBroker extends BaseBrokerAdapter {
       if (envelopes.length === 0) return;
 
       const startTime = Date.now();
-      const messagesByTopic: Map<string, KafkaMessage[]> = new Map();
+      const messagesByTopic: Map<string, Message[]> = new Map();
 
       for (const envelope of envelopes) {
         const topic = this.getTopicForEventType(envelope.metadata.eventType);

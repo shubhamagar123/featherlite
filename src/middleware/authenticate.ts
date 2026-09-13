@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import * as admin from 'firebase-admin';
+import { FirebaseAuthError } from 'firebase-admin/auth';
 import { logger } from '@utils/logger';
 import { AppError, ErrorCode } from '@utils/error';
 import { getRedisClient } from '@infra/redis/redis.provider';
@@ -27,7 +28,7 @@ declare global {
  */
 export async function authenticate(
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): Promise<void> {
   try {
@@ -83,7 +84,7 @@ export async function authenticate(
 
       next();
     } catch (error) {
-      if (error instanceof admin.auth.AuthError) {
+      if (error instanceof FirebaseAuthError) {
         throw new AppError(
           401,
           ErrorCode.INVALID_TOKEN,
@@ -95,14 +96,13 @@ export async function authenticate(
     }
   } catch (error) {
     if (error instanceof AppError) {
-      throw error;
+      next(error);
+      return;
     }
 
     logger.error({ error }, 'Authentication error');
-    throw new AppError(
-      500,
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      'Authentication failed'
+    next(
+      new AppError(500, ErrorCode.INTERNAL_SERVER_ERROR, 'Authentication failed')
     );
   }
 }

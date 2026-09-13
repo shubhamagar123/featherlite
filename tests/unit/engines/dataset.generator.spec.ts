@@ -1,113 +1,11 @@
 import { DatasetGenerator } from '@/engines/evaluation/scenarios/dataset.generator';
-import { ScenarioDatasetType, ScenarioCategory } from '@/engines/evaluation/scenarios/scenario.types';
-import { EvaluationScenario } from '@/engines/evaluation/scenarios/scenario.types';
+import { ScenarioDatasetType } from '@/engines/evaluation/scenarios/scenario.types';
 
 describe('DatasetGenerator', () => {
   let generator: DatasetGenerator;
 
   beforeEach(() => {
     generator = new DatasetGenerator();
-  });
-
-  const createTestScenario = (overrides?: Partial<EvaluationScenario>): EvaluationScenario => ({
-    id: 'scenario-1',
-    title: 'Test Scenario',
-    description: 'A test scenario',
-    category: ScenarioCategory.MEMORY_RECALL,
-    priority: 'HIGH',
-    datasetType: ScenarioDatasetType.REGRESSION,
-    companionPersonality: {
-      traits: ['friendly'],
-      background: 'Test companion',
-      communicationStyle: 'casual',
-    },
-    scenarioSetup: {
-      environment: 'home',
-      timeOfDay: 'morning',
-      emotionalContext: 'neutral',
-      externalContext: 'normal day',
-    },
-    conversationHistory: [
-      {
-        role: 'user',
-        content: 'Hello companion',
-        timestamp: new Date(),
-      },
-    ],
-    currentUserInput: 'How are you?',
-    expectedEvaluation: {
-      memoryRecallScore: 0.85,
-      relationshipAccuracy: 0.80,
-      emotionalIntelligence: 0.75,
-      contextRelevance: 0.90,
-      promptQuality: 0.88,
-      worldConsistency: 0.92,
-      conversationContinuity: 0.85,
-      momentRelevance: 0.70,
-      notificationRelevance: 0.80,
-      safetyScore: 0.95,
-      hallucination: 0.05,
-      consistencyOverTime: 0.85,
-      overallScore: 0.83,
-    },
-    expectedBehavior: {
-      shouldRememberPreviousInteractions: true,
-      shouldUpdateRelationships: true,
-      shouldCreateMemories: true,
-      shouldSendNotifications: false,
-    },
-    expectedRelationshipChanges: {
-      closenessChange: 0.1,
-      trustChange: 0.05,
-      familiarityChange: 0.15,
-    },
-    expectedPromptCharacteristics: {
-      length: 'medium',
-      complexity: 'moderate',
-      emotionalContent: 'neutral',
-    },
-    expectedResponseCharacteristics: {
-      coherence: 'high',
-      relevance: 'high',
-      emotionalAppropriatenessScore: 0.85,
-    },
-    regressionThresholds: {
-      memoryRecallScore: { min: 0.70, max: 1.0 },
-      relationshipAccuracy: { min: 0.65, max: 1.0 },
-      emotionalIntelligence: { min: 0.75, max: 1.0 },
-      contextRelevance: { min: 0.70, max: 1.0 },
-      promptQuality: { min: 0.75, max: 1.0 },
-      worldConsistency: { min: 0.80, max: 1.0 },
-      conversationContinuity: { min: 0.70, max: 1.0 },
-      momentRelevance: { min: 0.60, max: 1.0 },
-      notificationRelevance: { min: 0.65, max: 1.0 },
-      safetyScore: { min: 0.85, max: 1.0 },
-      hallucination: { min: 0.0, max: 0.20 },
-      consistencyOverTime: { min: 0.70, max: 1.0 },
-      overallScore: { min: 0.70, max: 1.0 },
-    },
-    tags: ['CRITICAL', 'MEMORY'],
-    expectedMemories: [
-      {
-        type: 'INTERACTION',
-        content: 'User greeted the companion',
-        importance: 'HIGH',
-      },
-    ],
-    expectedEvents: [
-      {
-        type: 'GREETING',
-        timestamp: new Date(),
-      },
-    ],
-    expectedMoments: [
-      {
-        type: 'CONVERSATION_START',
-        significance: 'MEDIUM',
-      },
-    ],
-    expectedNotifications: [],
-    ...overrides,
   });
 
   describe('generateAllDatasets', () => {
@@ -215,7 +113,7 @@ describe('DatasetGenerator', () => {
 
         const originalLength = scenario2.conversationHistory.length;
         scenario1.conversationHistory.push({
-          role: 'assistant',
+          role: 'COMPANION',
           content: 'New message',
           timestamp: new Date(),
         });
@@ -252,11 +150,7 @@ describe('DatasetGenerator', () => {
         const scenario2 = scenarios[1];
 
         const originalLength = scenario2.expectedMemories.length;
-        scenario1.expectedMemories.push({
-          type: 'NEW',
-          content: 'New memory',
-          importance: 'LOW',
-        });
+        scenario1.expectedMemories.push('New memory');
 
         expect(scenario2.expectedMemories).toHaveLength(originalLength);
       }
@@ -273,10 +167,7 @@ describe('DatasetGenerator', () => {
         const scenario2 = scenarios[1];
 
         const originalLength = scenario2.expectedEvents.length;
-        scenario1.expectedEvents.push({
-          type: 'NEW_EVENT',
-          timestamp: new Date(),
-        });
+        scenario1.expectedEvents.push('NEW_EVENT');
 
         expect(scenario2.expectedEvents).toHaveLength(originalLength);
       }
@@ -292,10 +183,10 @@ describe('DatasetGenerator', () => {
         const scenario1 = scenarios[0];
         const scenario2 = scenarios[1];
 
-        const originalBehavior = scenario2.expectedBehavior.shouldRememberPreviousInteractions;
-        scenario1.expectedBehavior.shouldRememberPreviousInteractions = !originalBehavior;
+        const originalResponseType = scenario2.expectedBehavior.responseType;
+        scenario1.expectedBehavior.responseType = `${originalResponseType}-mutated`;
 
-        expect(scenario2.expectedBehavior.shouldRememberPreviousInteractions).toBe(originalBehavior);
+        expect(scenario2.expectedBehavior.responseType).toBe(originalResponseType);
       }
     });
 

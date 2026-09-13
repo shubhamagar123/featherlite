@@ -74,7 +74,7 @@ export async function registerMemoryRoutes(app: Application): Promise<void> {
     validate(listMemoriesSchema),
     asyncHandler(async (req: Request, res: Response) => {
       const userId = req.user!.uid;
-      const { page = 1, limit = 20, type, importance } = req.query as Record<string, any>;
+      const { page = 1, limit = 20 } = req.query as Record<string, any>;
 
       try {
         // TODO: Query MemoryRepository with filters and pagination
@@ -253,7 +253,7 @@ export async function registerMemoryRoutes(app: Application): Promise<void> {
     validate(searchMemoriesSchema),
     asyncHandler(async (req: Request, res: Response) => {
       const userId = req.user!.uid;
-      const { q, page = 1, limit = 20, type } = req.query as Record<string, any>;
+      const { q, page = 1, limit = 20 } = req.query as Record<string, any>;
 
       try {
         // TODO: Full-text search via MemoryService

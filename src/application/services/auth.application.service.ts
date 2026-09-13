@@ -11,6 +11,8 @@ import {
 import { UnauthorizedError } from '@utils/error';
 import { UserRepository } from '@database/repositories/user.repository';
 import { getRedisClient } from '@infra/redis/redis.provider';
+import { getDatabaseServices } from '@services/factory';
+import { getAnonymousMemoryBufferService } from '@services/memory/anonymous-memory-buffer.service';
 import { randomInt } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -221,8 +223,13 @@ export class AuthApplicationService extends ApplicationServiceBase {
    * Verify an OTP code and issue a session — no password anywhere in this
    * flow. On success, finds or creates the User by phone/email and returns
    * the same AuthTokenDto shape as createSession().
+   *
+   * `sessionKey`, when provided, identifies an anonymous (pre-auth)
+   * conversation whose memory candidates were buffered rather than
+   * discarded — see AnonymousMemoryBufferService. Flushing is best-effort:
+   * a flush failure must not fail sign-in.
    */
-  async verifyOtpCode(identifier: string, code: string): Promise<AuthTokenDto> {
+  async verifyOtpCode(identifier: string, code: string, sessionKey?: string): Promise<AuthTokenDto> {
     const masked = this.maskIdentifier(identifier);
     this.logStart('verifyOtpCode', { identifier: masked });
 
@@ -254,6 +261,22 @@ export class AuthApplicationService extends ApplicationServiceBase {
 
       await this.redis.setex(`auth:refresh:${user.id}`, 7 * 24 * 60 * 60, refreshToken);
       await this.redis.setex(`auth:session:${user.id}`, 24 * 60 * 60, 'ACTIVE');
+
+      if (sessionKey) {
+        try {
+          const services = getDatabaseServices();
+          const flushed = await getAnonymousMemoryBufferService(services.memoryService).flush(
+            sessionKey,
+            user.id
+          );
+          if (flushed > 0) {
+            this.logger.info({ userId: user.id, sessionKey, flushed }, 'Flushed buffered memory candidates on sign-in');
+          }
+        } catch (flushError) {
+          // Best-effort: a buffer flush must never fail the sign-in itself.
+          this.logger.error({ error: flushError, userId: user.id, sessionKey }, 'Failed to flush anonymous memory buffer');
+        }
+      }
 
       this.logSuccess('verifyOtpCode', { userId: user.id });
 

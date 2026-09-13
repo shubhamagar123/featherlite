@@ -5,7 +5,6 @@ import {
 } from '../dtos/application.dtos';
 import { ResourceNotFoundException } from '../exceptions/application.exceptions';
 import { RelationshipRepository } from '@database/repositories/relationship.repository';
-import { RelationshipEngine } from '@engines/relationship/relationship.engine';
 import { CompanionRepository } from '@database/repositories/companion.repository';
 
 /**
@@ -15,13 +14,11 @@ import { CompanionRepository } from '@database/repositories/companion.repository
  */
 export class RelationshipApplicationService extends ApplicationServiceBase {
   private readonly relationshipRepository: RelationshipRepository;
-  private readonly relationshipEngine: RelationshipEngine;
   private readonly companionRepository: CompanionRepository;
 
   constructor() {
     super('RelationshipApplicationService');
     this.relationshipRepository = new RelationshipRepository();
-    this.relationshipEngine = new RelationshipEngine();
     this.companionRepository = new CompanionRepository();
   }
 
@@ -70,9 +67,8 @@ export class RelationshipApplicationService extends ApplicationServiceBase {
       }
 
       const relationships = await this.relationshipRepository.findByCompanionId(companionId, {
-        limit,
-        orderBy: 'createdAt',
-        order: 'desc',
+        take: limit,
+        orderBy: { createdAt: 'desc' },
       });
 
       this.logSuccess('getRelationshipTimeline', {
@@ -129,7 +125,7 @@ export class RelationshipApplicationService extends ApplicationServiceBase {
     companionId: string,
     limit: number = 50
   ): Promise<Record<string, unknown>[]> {
-    this.logStart('getSharedMemories', { userId: context.userId, companionId });
+    this.logStart('getSharedMemories', { userId: context.userId, companionId, limit });
 
     try {
       const companion = await this.companionRepository.findById(companionId);

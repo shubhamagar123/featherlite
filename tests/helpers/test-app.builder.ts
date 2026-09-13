@@ -21,17 +21,16 @@ export class TestAppBuilder {
     this.app.use(express.urlencoded({ extended: true }));
 
     // Request ID middleware
-    this.app.use((req, res, next) => {
+    this.app.use((req, _res, next) => {
       req.id = req.headers['x-request-id'] as string || `test-${Date.now()}`;
       next();
     });
   }
 
   addAuthMiddleware(): this {
-    this.app.use((req, res, next) => {
+    this.app.use((req, _res, next) => {
       // Mock authentication for testing
       if (req.headers.authorization) {
-        const token = req.headers.authorization.replace('Bearer ', '');
         (req as any).user = {
           uid: req.headers['x-test-user-id'] || 'test-user-1',
           email: 'test@example.com',

@@ -111,9 +111,8 @@ export class NotificationApplicationService extends ApplicationServiceBase {
 
     try {
       const notifications = await this.notificationRepository.findByUserId(context.userId, {
-        limit,
-        orderBy: 'createdAt',
-        order: 'desc',
+        take: limit,
+        orderBy: { createdAt: 'desc' },
       });
 
       this.logSuccess('getHistory', {
@@ -128,7 +127,7 @@ export class NotificationApplicationService extends ApplicationServiceBase {
         title: n.title,
         message: n.message,
         channel: n.channel,
-        isRead: n.read,
+        isRead: n.status === 'READ',
         data: {},
         createdAt: n.createdAt,
       }));
@@ -147,7 +146,7 @@ export class NotificationApplicationService extends ApplicationServiceBase {
     token: string,
     platform: string = 'web'
   ): Promise<Record<string, unknown>> {
-    this.logStart('registerPushToken', { userId: context.userId });
+    this.logStart('registerPushToken', { userId: context.userId, tokenLength: token.length });
 
     try {
       this.logSuccess('registerPushToken', { userId: context.userId });
@@ -180,7 +179,8 @@ export class NotificationApplicationService extends ApplicationServiceBase {
       }
 
       const updated = await this.notificationRepository.update(notificationId, {
-        read: true,
+        status: 'READ',
+        readAt: new Date(),
       });
 
       this.logSuccess('markAsRead', { userId: context.userId, notificationId });

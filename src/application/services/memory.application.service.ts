@@ -5,7 +5,8 @@ import {
 } from '../dtos/application.dtos';
 import { ResourceNotFoundException } from '../exceptions/application.exceptions';
 import { MemoryRepository } from '@database/repositories/memory.repository';
-import { MemoryEngine } from '@engines/memory/memory.engine';
+import { getMemoryEngine, MemoryEngineHandle } from '@engines/memory/memory.factory';
+import { SearchType } from '@engines/memory/enums/memory.enums';
 import { CompanionRepository } from '@database/repositories/companion.repository';
 
 /**
@@ -15,13 +16,13 @@ import { CompanionRepository } from '@database/repositories/companion.repository
  */
 export class MemoryApplicationService extends ApplicationServiceBase {
   private readonly memoryRepository: MemoryRepository;
-  private readonly memoryEngine: MemoryEngine;
+  private readonly memoryEngine: MemoryEngineHandle;
   private readonly companionRepository: CompanionRepository;
 
   constructor() {
     super('MemoryApplicationService');
     this.memoryRepository = new MemoryRepository();
-    this.memoryEngine = new MemoryEngine();
+    this.memoryEngine = getMemoryEngine();
     this.companionRepository = new CompanionRepository();
   }
 
@@ -43,7 +44,13 @@ export class MemoryApplicationService extends ApplicationServiceBase {
         throw new ResourceNotFoundException('Companion', companionId);
       }
 
-      const memories = await this.memoryEngine.search(companionId, query, { limit });
+      const searchResult = this.memoryEngine.search({
+        searchType: SearchType.KEYWORD,
+        query,
+        userId: context.userId,
+        limit,
+      });
+      const memories = searchResult.getValueOrThrow().memories;
 
       this.logSuccess('searchMemories', {
         userId: context.userId,
@@ -77,7 +84,7 @@ export class MemoryApplicationService extends ApplicationServiceBase {
       }
 
       const memories = await this.memoryRepository.findByCompanionId(companionId, {
-        limit,
+        take: limit,
         ...filters,
       });
 
@@ -112,9 +119,8 @@ export class MemoryApplicationService extends ApplicationServiceBase {
       }
 
       const memories = await this.memoryRepository.findByCompanionId(companionId, {
-        limit,
-        orderBy: 'createdAt',
-        order: 'desc',
+        take: limit,
+        orderBy: { createdAt: 'desc' },
       });
 
       this.logSuccess('getMemoryTimeline', {

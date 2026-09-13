@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { ConversationApplicationService } from '@application/services/conversation.application.service';
 import { ApplicationContext } from '@application/dtos/application.dtos';
 import { validate } from '@application/validators/application.validators';
-import { asyncHandler } from '@api/index';
+import { asyncHandler } from '@utils/asyncHandler';
 import { sendOk } from '@utils/response';
 import { UnauthorizedError } from '@utils/error';
 import { createLogger } from '@utils/logger';

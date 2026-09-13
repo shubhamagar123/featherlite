@@ -7,7 +7,7 @@ import {
 } from '@application/services/nudge.application.service';
 import { ApplicationContext } from '@application/dtos/application.dtos';
 import { validate } from '@application/validators/application.validators';
-import { asyncHandler } from '@api/index';
+import { asyncHandler } from '@utils/asyncHandler';
 import { sendOk, sendCreated, sendNoContent } from '@utils/response';
 import { UnauthorizedError } from '@utils/error';
 import { createLogger } from '@utils/logger';

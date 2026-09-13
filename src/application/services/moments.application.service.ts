@@ -19,7 +19,7 @@ export class MomentsApplicationService extends ApplicationServiceBase {
     context: ApplicationContext,
     limit: number = 20
   ): Promise<Record<string, unknown>[]> {
-    this.logStart('getUpcomingMoments', { userId: context.userId });
+    this.logStart('getUpcomingMoments', { userId: context.userId, limit });
 
     try {
       this.logSuccess('getUpcomingMoments', {
@@ -42,7 +42,7 @@ export class MomentsApplicationService extends ApplicationServiceBase {
     context: ApplicationContext,
     limit: number = 50
   ): Promise<Record<string, unknown>[]> {
-    this.logStart('getMomentHistory', { userId: context.userId });
+    this.logStart('getMomentHistory', { userId: context.userId, limit });
 
     try {
       this.logSuccess('getMomentHistory', {
@@ -65,7 +65,7 @@ export class MomentsApplicationService extends ApplicationServiceBase {
     context: ApplicationContext,
     limit: number = 20
   ): Promise<Record<string, unknown>[]> {
-    this.logStart('getScheduledCallbacks', { userId: context.userId });
+    this.logStart('getScheduledCallbacks', { userId: context.userId, limit });
 
     try {
       this.logSuccess('getScheduledCallbacks', {

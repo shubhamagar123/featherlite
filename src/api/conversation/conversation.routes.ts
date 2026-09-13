@@ -244,7 +244,7 @@ export async function registerConversationRoutes(app: Application): Promise<void
     validate(listConversationsSchema),
     asyncHandler(async (req: Request, res: Response) => {
       const userId = req.user!.uid;
-      const { page = 1, limit = 20, companionId } = req.query as Record<string, any>;
+      const { page = 1, limit = 20 } = req.query as Record<string, any>;
 
       try {
         // TODO: Query ConversationRepository with pagination

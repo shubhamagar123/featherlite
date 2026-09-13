@@ -5,8 +5,6 @@ import { initializeTracing, shutdownTracing } from '@infra/tracing/otel';
 import { initializeMetrics } from '@infra/observability/metrics';
 import { getDeploymentConfig } from '@config/deployment';
 
-const app = createApp();
-
 interface ServerOptions {
   port: number;
   host?: string;
@@ -15,6 +13,7 @@ interface ServerOptions {
 export async function startServer(options: ServerOptions = { port: environment.PORT }): Promise<void> {
   const { port, host = '0.0.0.0' } = options;
   const deploymentConfig = getDeploymentConfig();
+  const app = await createApp();
 
   // Initialize observability
   if (deploymentConfig.otel.enabled) {
@@ -31,7 +30,7 @@ export async function startServer(options: ServerOptions = { port: environment.P
       resolve();
     });
 
-    server.on('error', (error) => {
+    server.on('error', (error: Error) => {
       logger.error({ error }, 'Server error');
       reject(error);
     });

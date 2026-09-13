@@ -9,9 +9,12 @@ describe('VoiceManager', () => {
   });
 
   const createVoiceData = (size: number = 1024, timestamp: Date = new Date()): VoiceData => ({
+    userId: 'user1',
+    sessionId: 'session1',
+    chunkId: `chunk-${Math.random()}`,
     audio: Buffer.alloc(size),
     timestamp,
-    format: 'pcm',
+    sequence: 0,
   });
 
   describe('startVoiceSession', () => {
@@ -198,7 +201,6 @@ describe('VoiceManager', () => {
     it('should return chunks after specified timestamp', () => {
       const session = manager.startVoiceSession('user1', 'session1', 'interaction1');
       const before = new Date('2026-07-10T10:00:00Z');
-      const after = new Date('2026-07-10T11:00:00Z');
 
       manager.addVoiceChunk(session.sessionId, createVoiceData(1024, new Date('2026-07-10T10:30:00Z')));
       manager.addVoiceChunk(session.sessionId, createVoiceData(1024, new Date('2026-07-10T11:30:00Z')));
@@ -247,7 +249,7 @@ describe('VoiceManager', () => {
   });
 
   describe('updateVoiceSessionActivity', () => {
-    it('should update last chunk timestamp', () => {
+    it('should update last chunk timestamp', async () => {
       const session = manager.startVoiceSession('user1', 'session1', 'interaction1');
       const originalTime = session.lastChunkAt;
 
@@ -353,7 +355,7 @@ describe('VoiceManager', () => {
   describe('getActiveVoiceSessions', () => {
     it('should return only active sessions', () => {
       const session1 = manager.startVoiceSession('user1', 'session1', 'interaction1');
-      const session2 = manager.startVoiceSession('user1', 'session1', 'interaction2');
+      manager.startVoiceSession('user1', 'session1', 'interaction2');
       manager.startVoiceSession('user1', 'session1', 'interaction3');
 
       manager.endVoiceSession(session1.sessionId);
@@ -390,9 +392,8 @@ describe('VoiceManager', () => {
       expect(stats).toBeNull();
     });
 
-    it('should calculate duration correctly', () => {
+    it('should calculate duration correctly', async () => {
       const session = manager.startVoiceSession('user1', 'session1', 'interaction1');
-      const startTime = session.startedAt.getTime();
 
       const delay = 100;
       await new Promise(resolve => setTimeout(resolve, delay));

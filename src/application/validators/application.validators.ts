@@ -45,6 +45,9 @@ export const requestOtpCodeSchema = z.object({
 export const verifyOtpCodeSchema = z.object({
   identifier: z.string().min(3, 'Phone number or email is required').max(255),
   code: z.string().regex(/^\d{6}$/, 'Code must be 6 digits'),
+  // Identifies an anonymous (pre-auth) conversation whose buffered memory
+  // candidates should be flushed into permanent storage on sign-in.
+  sessionKey: z.string().min(1).max(255).optional(),
 });
 
 // User Validators

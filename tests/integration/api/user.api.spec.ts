@@ -6,13 +6,11 @@
 import request from 'supertest';
 import { Application } from 'express';
 import { createTestApp } from '@helpers/test-app.builder';
-import { UserFactory } from '@factories/user.factory';
 import { PrismaClient } from '@prisma/client';
 
 describe('User API Endpoints', () => {
   let app: Application;
   let db: PrismaClient;
-  let userFactory: UserFactory;
 
   beforeAll(async () => {
     app = createTestApp();
@@ -23,7 +21,6 @@ describe('User API Endpoints', () => {
         },
       },
     });
-    userFactory = new UserFactory(db);
   });
 
   afterAll(async () => {

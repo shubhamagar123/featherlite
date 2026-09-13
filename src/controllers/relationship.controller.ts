@@ -3,7 +3,7 @@ import { ControllerBase } from './controller.base';
 import { RelationshipApplicationService } from '@application/services/relationship.application.service';
 import { ApplicationContext } from '@application/dtos/application.dtos';
 import { validate, uuidSchema } from '@application/validators/application.validators';
-import { asyncHandler } from '@api/index';
+import { asyncHandler } from '@utils/asyncHandler';
 import { z } from 'zod';
 
 /**

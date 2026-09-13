@@ -61,7 +61,7 @@ export async function registerMomentRoutes(app: Application): Promise<void> {
     validate(listMomentsSchema),
     asyncHandler(async (req: Request, res: Response) => {
       const userId = req.user!.uid;
-      const { page = 1, limit = 20, upcoming, type } = req.query as Record<
+      const { page = 1, limit = 20 } = req.query as Record<
         string,
         any
       >;

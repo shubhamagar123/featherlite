@@ -4,6 +4,7 @@
  */
 
 import { NotificationApplicationService } from '@application/services/notification.application.service';
+import { ApplicationContext } from '@application/dtos/application.dtos';
 import { PrismaClient, User, UserRole, UserStatus } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -11,6 +12,16 @@ describe('NotificationApplicationService', () => {
   let service: NotificationApplicationService;
   let db: PrismaClient;
   let testUser: User;
+
+  const buildContext = (overrides: Partial<ApplicationContext> = {}): ApplicationContext => ({
+    userId: testUser.id,
+    userEmail: testUser.email,
+    userRoles: [],
+    requestId: uuidv4(),
+    traceId: uuidv4(),
+    timestamp: new Date(),
+    ...overrides,
+  });
 
   beforeAll(async () => {
     db = new PrismaClient({
@@ -20,15 +31,15 @@ describe('NotificationApplicationService', () => {
         },
       },
     });
-    service = new NotificationApplicationService(db);
+    service = new NotificationApplicationService();
   });
 
   beforeEach(async () => {
     testUser = await db.user.create({
       data: {
         id: uuidv4(),
-        email: 'notification@example.com',
-        username: 'notificationuser',
+        email: `notification-${uuidv4()}@example.com`,
+        username: `notificationuser-${uuidv4().slice(0, 8)}`,
         firebaseUid: `firebase-${uuidv4()}`,
         role: UserRole.USER,
         status: UserStatus.ACTIVE,
@@ -50,234 +61,140 @@ describe('NotificationApplicationService', () => {
 
   describe('getPreferences', () => {
     it('should return notification preferences', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
+      const result = await service.getPreferences(buildContext());
 
-      const result = await service.getPreferences(context);
-
-      expect(result.isSuccess()).toBe(true);
-      expect(result.value).toHaveProperty('notificationsEnabled');
-      expect(result.value).toHaveProperty('emailNotificationsEnabled');
-      expect(result.value).toHaveProperty('pushNotificationsEnabled');
+      expect(result).toHaveProperty('notificationsEnabled');
+      expect(result).toHaveProperty('emailNotificationsEnabled');
+      expect(result).toHaveProperty('pushNotificationsEnabled');
     });
 
-    it('should return all preference fields', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
+    it('should return channel and quiet-hours structure', async () => {
+      const result = await service.getPreferences(buildContext());
 
-      const result = await service.getPreferences(context);
-
-      const prefs = result.value;
-      expect(prefs).toHaveProperty('frequency');
-      expect(prefs).toHaveProperty('email');
-      expect(prefs).toHaveProperty('push');
-      expect(prefs).toHaveProperty('sms');
-      expect(prefs).toHaveProperty('inApp');
+      expect(result).toHaveProperty('channels');
+      expect(result).toHaveProperty('quietHours');
+      expect((result as any).channels).toHaveProperty('email');
+      expect((result as any).channels).toHaveProperty('push');
+      expect((result as any).channels).toHaveProperty('inApp');
     });
 
     it('should return boolean notification preferences', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
+      const result = await service.getPreferences(buildContext());
 
-      const result = await service.getPreferences(context);
+      expect(typeof (result as any).notificationsEnabled).toBe('boolean');
+      expect(typeof (result as any).emailNotificationsEnabled).toBe('boolean');
+      expect(typeof (result as any).pushNotificationsEnabled).toBe('boolean');
+    });
 
-      const prefs = result.value;
-      expect(typeof (prefs as any).notificationsEnabled).toBe('boolean');
-      expect(typeof (prefs as any).emailNotificationsEnabled).toBe('boolean');
-      expect(typeof (prefs as any).pushNotificationsEnabled).toBe('boolean');
+    it('should fail for non-existent user', async () => {
+      const context = buildContext({ userId: uuidv4() });
+
+      await expect(service.getPreferences(context)).rejects.toThrow();
     });
   });
 
   describe('updatePreferences', () => {
     it('should update notification preferences', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
-
-      const updateData = {
+      const result = await service.updatePreferences(buildContext(), {
         notificationsEnabled: false,
-        frequency: 'daily',
-      };
+      });
 
-      const result = await service.updatePreferences(context, updateData);
-
-      expect(result.isSuccess()).toBe(true);
-      expect(result.value).toHaveProperty('notificationsEnabled', false);
-      expect(result.value).toHaveProperty('frequency', 'daily');
+      expect(result).toHaveProperty('notificationsEnabled', false);
     });
 
     it('should update channel preferences', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
+      const result = await service.updatePreferences(buildContext(), {
+        emailNotificationsEnabled: false,
+        pushNotificationsEnabled: true,
+      });
 
-      const updateData = {
-        email: false,
-        push: true,
-      };
-
-      const result = await service.updatePreferences(context, updateData);
-
-      expect(result.isSuccess()).toBe(true);
-      expect(result.value).toHaveProperty('email', false);
-      expect(result.value).toHaveProperty('push', true);
+      expect((result as any).channels.email).toBe(false);
+      expect((result as any).channels.push).toBe(true);
     });
 
     it('should preserve unmodified preferences', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
-
-      const updateData = {
+      const result = await service.updatePreferences(buildContext(), {
         notificationsEnabled: false,
-      };
+      });
 
-      const result = await service.updatePreferences(context, updateData);
-
-      expect(result.value).toHaveProperty('frequency');
-      expect(result.value).toHaveProperty('email');
-      expect(result.value).toHaveProperty('push');
+      expect(result).toHaveProperty('channels');
+      expect(result).toHaveProperty('quietHours');
     });
 
     it('should fail for non-existent user', async () => {
-      const context = {
-        userId: uuidv4(),
-        email: 'nonexistent@example.com',
-        reqId: uuidv4(),
-      };
+      const context = buildContext({ userId: uuidv4() });
 
-      const result = await service.updatePreferences(context, {});
-
-      expect(result.isFailure()).toBe(true);
+      await expect(service.updatePreferences(context, {})).rejects.toThrow();
     });
   });
 
   describe('getHistory', () => {
-    it('should return notification history', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
+    it('should return notification history as an array', async () => {
+      const result = await service.getHistory(buildContext(), 20);
 
-      const result = await service.getHistory(context, {
-        skip: 0,
-        take: 20,
-      });
-
-      expect(result.isSuccess()).toBe(true);
-      expect(result.value).toHaveProperty('notifications');
-      expect(Array.isArray((result.value as any).notifications)).toBe(true);
+      expect(Array.isArray(result)).toBe(true);
     });
 
-    it('should support pagination', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
+    it('should respect the limit argument', async () => {
+      const result = await service.getHistory(buildContext(), 1);
 
-      const result = await service.getHistory(context, {
-        skip: 0,
-        take: 20,
-      });
-
-      expect(result.value).toHaveProperty('total');
-      expect(result.value).toHaveProperty('skip');
-      expect(result.value).toHaveProperty('take');
+      expect(result.length).toBeLessThanOrEqual(1);
     });
 
     it('should sort notifications in reverse chronological order', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
-
-      const result = await service.getHistory(context, {
-        skip: 0,
-        take: 20,
+      await db.notification.create({
+        data: {
+          id: uuidv4(),
+          userId: testUser.id,
+          title: 'First',
+          message: 'First message',
+          type: 'SYSTEM',
+          channel: 'IN_APP',
+          createdAt: new Date(Date.now() - 60_000),
+        },
+      });
+      await db.notification.create({
+        data: {
+          id: uuidv4(),
+          userId: testUser.id,
+          title: 'Second',
+          message: 'Second message',
+          type: 'SYSTEM',
+          channel: 'IN_APP',
+        },
       });
 
-      const notifs = (result.value as any).notifications;
-      for (let i = 1; i < notifs.length; i++) {
-        const prevTime = new Date(notifs[i - 1].createdAt).getTime();
-        const currTime = new Date(notifs[i].createdAt).getTime();
+      const result = await service.getHistory(buildContext(), 20);
+
+      for (let i = 1; i < result.length; i++) {
+        const prevTime = new Date(result[i - 1].createdAt).getTime();
+        const currTime = new Date(result[i].createdAt).getTime();
         expect(prevTime).toBeGreaterThanOrEqual(currTime);
       }
     });
-
-    it('should support read status filtering', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
-
-      const result = await service.getHistory(context, {
-        skip: 0,
-        take: 20,
-        read: false,
-      });
-
-      expect(result.isSuccess()).toBe(true);
-    });
   });
 
-  describe('registerToken', () => {
-    it('should register push notification token', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
+  describe('registerPushToken', () => {
+    it('should register a push notification token', async () => {
+      const result = await service.registerPushToken(buildContext(), 'push-token-123', 'ios');
 
-      const result = await service.registerToken(context, 'push-token-123', 'ios');
-
-      expect(result.isSuccess()).toBe(true);
-      expect(result.value).toHaveProperty('token');
-      expect(result.value).toHaveProperty('platform');
-    });
-
-    it('should validate platform value', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
-
-      const result = await service.registerToken(context, 'token', 'invalid');
-
-      expect([true, false]).toContain(result.isSuccess());
+      expect(result).toHaveProperty('success', true);
+      expect(result).toHaveProperty('platform', 'ios');
+      expect(result).toHaveProperty('registeredAt');
     });
 
     it('should support multiple platforms', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
+      const iosResult = await service.registerPushToken(buildContext(), 'ios-token', 'ios');
+      const androidResult = await service.registerPushToken(buildContext(), 'android-token', 'android');
 
-      const iosResult = await service.registerToken(context, 'ios-token', 'ios');
-      const androidResult = await service.registerToken(context, 'android-token', 'android');
+      expect(iosResult.success).toBe(true);
+      expect(androidResult.success).toBe(true);
+    });
 
-      expect(iosResult.isSuccess()).toBe(true);
-      expect(androidResult.isSuccess()).toBe(true);
+    it('should default the platform to web when not provided', async () => {
+      const result = await service.registerPushToken(buildContext(), 'a-token');
+
+      expect(result).toHaveProperty('platform', 'web');
     });
   });
 
@@ -291,65 +208,30 @@ describe('NotificationApplicationService', () => {
           userId: testUser.id,
           title: 'Test Notification',
           message: 'Test message',
-          type: 'INFO',
-          read: false,
+          type: 'SYSTEM',
+          channel: 'IN_APP',
+          status: 'SENT',
         },
       });
       notificationId = notification.id;
     });
 
     it('should mark notification as read', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
+      const result = await service.markAsRead(buildContext(), notificationId);
 
-      const result = await service.markAsRead(context, notificationId);
-
-      expect(result.isSuccess()).toBe(true);
-      expect(result.value).toHaveProperty('read', true);
+      expect(result).toHaveProperty('isRead', true);
     });
 
     it('should return 404 for non-existent notification', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
-
-      const result = await service.markAsRead(context, uuidv4());
-
-      expect(result.isFailure()).toBe(true);
+      await expect(service.markAsRead(buildContext(), uuidv4())).rejects.toThrow();
     });
   });
 
   describe('Error Handling', () => {
-    it('should handle invalid pagination parameters', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
-
-      const result = await service.getHistory(context, {
-        skip: -1,
-        take: -1,
-      });
-
-      expect([true, false]).toContain(result.isSuccess());
-    });
-
     it('should handle missing context user ID', async () => {
-      const context = {
-        userId: '',
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
+      const context = buildContext({ userId: '' });
 
-      const result = await service.getPreferences(context);
-
-      expect(result.isFailure()).toBe(true);
+      await expect(service.getPreferences(context)).rejects.toThrow();
     });
   });
 });

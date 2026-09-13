@@ -234,7 +234,7 @@ describe('Notification API Endpoints', () => {
         .set('x-test-user-id', 'test-user-1')
         .expect(200);
 
-      res.body.data.notifications.forEach(notif => {
+      res.body.data.notifications.forEach((notif: any) => {
         expect(notif.read).toBe(false);
       });
     });

@@ -1,0 +1,33 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "baseUrl": ".",
+    "noEmit": true,
+    "paths": {
+      "@/*": ["src/*"],
+      "@api/*": ["src/api/*"],
+      "@application/*": ["src/application/*"],
+      "@controllers/*": ["src/controllers/*"],
+      "@database/*": ["src/database/*"],
+      "@modules/*": ["src/modules/*"],
+      "@routes/*": ["src/routes/*"],
+      "@services/*": ["src/services/*"],
+      "@engines/*": ["src/engines/*"],
+      "@middleware/*": ["src/middleware/*"],
+      "@utils/*": ["src/utils/*"],
+      "@types/*": ["src/types/*"],
+      "@config/*": ["src/config/*"],
+      "@constants/*": ["src/constants/*"],
+      "@events/*": ["src/events/*"],
+      "@validators/*": ["src/validators/*"],
+      "@infra/*": ["src/infra/*"],
+      "@fixtures/*": ["tests/fixtures/*"],
+      "@factories/*": ["tests/factories/*"],
+      "@mocks/*": ["tests/mocks/*"],
+      "@helpers/*": ["tests/helpers/*"]
+    }
+  },
+  "include": ["src/**/*", "tests/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/__tests__/*"]
+}
