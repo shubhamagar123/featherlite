@@ -5,7 +5,7 @@
 
 import express from 'express';
 import { Application } from 'express';
-import { errorHandlerApplicationMiddleware, notFoundHandlerApplicationMiddleware } from '@middleware/error-handler.application';
+import { errorHandlerMiddleware, notFoundMiddleware } from '@middleware/errorHandler';
 import { registerV1Routes } from '@routes/v1';
 
 export class TestAppBuilder {
@@ -50,8 +50,8 @@ export class TestAppBuilder {
   }
 
   addErrorHandling(): this {
-    this.app.use(notFoundHandlerApplicationMiddleware);
-    this.app.use(errorHandlerApplicationMiddleware);
+    this.app.use(notFoundMiddleware);
+    this.app.use(errorHandlerMiddleware);
     return this;
   }
 

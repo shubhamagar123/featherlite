@@ -53,6 +53,25 @@ export async function authenticate(
 
     const idToken = parts[1];
 
+    // Test-only bypass, mirroring the stub-Redis-client pattern in
+    // redis.provider.ts: lets integration tests exercise real routes without
+    // a live Firebase project. Requires NODE_ENV=test (never set in
+    // production) AND an explicit x-test-user-id header — a request with
+    // neither still goes through real Firebase verification.
+    if (process.env.NODE_ENV === 'test') {
+      const testUserId = req.headers['x-test-user-id'];
+      if (testUserId) {
+        req.user = {
+          uid: String(testUserId),
+          email: 'test@example.com',
+          emailVerified: true,
+          customClaims: {},
+        };
+        next();
+        return;
+      }
+    }
+
     try {
       const decodedToken = await admin.auth().verifyIdToken(idToken);
 
