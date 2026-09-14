@@ -9,7 +9,7 @@ import {
   verifyOtpCodeSchema,
   validate,
 } from '@application/validators/application.validators';
-import { asyncHandler } from '@api/index';
+import { asyncHandler } from '@utils/asyncHandler';
 import { sendOk } from '@utils/response';
 
 /**
@@ -194,11 +194,12 @@ export class AuthController extends ControllerBase {
   verifyCode = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     this.logRequest('POST', '/api/v1/auth/verify-code');
 
-    const { identifier, code } = validate<{ identifier: string; code: string }>(
-      req.body,
-      verifyOtpCodeSchema
-    );
-    const token = await this.authService.verifyOtpCode(identifier, code);
+    const { identifier, code, sessionKey } = validate<{
+      identifier: string;
+      code: string;
+      sessionKey?: string;
+    }>(req.body, verifyOtpCodeSchema);
+    const token = await this.authService.verifyOtpCode(identifier, code, sessionKey);
 
     sendOk(res, token);
   });

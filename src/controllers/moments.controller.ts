@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { ControllerBase } from './controller.base';
 import { MomentsApplicationService } from '@application/services/moments.application.service';
 import { ApplicationContext } from '@application/dtos/application.dtos';
-import { asyncHandler } from '@api/index';
+import { asyncHandler } from '@utils/asyncHandler';
 
 /**
  * Moments Controller

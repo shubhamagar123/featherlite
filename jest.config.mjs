@@ -5,6 +5,9 @@ export default {
   rootDir: '.',
   testMatch: ['**/tests/**/*.spec.ts'],
   moduleFileExtensions: ['ts', 'js', 'json'],
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.spec.json' }],
+  },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@api/(.*)$': '<rootDir>/src/api/$1',
@@ -44,4 +47,8 @@ export default {
     },
   },
   testTimeout: 30000,
+  // Integration specs share one Postgres test DB and truncate it in a global
+  // beforeEach (tests/setup/setup.ts) — running workers in parallel causes
+  // deadlocks/unique-constraint races across files hitting that DB at once.
+  maxWorkers: 1,
 };

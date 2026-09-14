@@ -17,8 +17,17 @@ describe('ReportGenerator', () => {
       totalScenarios: 10,
       categories: {
         MEMORY_RECALL: 3,
-        RELATIONSHIP_DYNAMICS: 3,
+        RELATIONSHIP_EVOLUTION: 3,
         EMOTIONAL_INTELLIGENCE: 4,
+        CONTEXT_GENERATION: 0,
+        PROMPT_QUALITY: 0,
+        WORLD_CONSISTENCY: 0,
+        CONVERSATION_CONTINUITY: 0,
+        MOMENTS_GENERATION: 0,
+        NOTIFICATIONS: 0,
+        SAFETY: 0,
+        HALLUCINATION_DETECTION: 0,
+        LONG_TERM_CONSISTENCY: 0,
       },
       priorities: {
         CRITICAL: 2,
@@ -35,6 +44,10 @@ describe('ReportGenerator', () => {
     executedAt: new Date(),
     duration: 1500,
     success: true,
+    actualBehavior: {},
+    actualMemories: [],
+    actualRelationshipChanges: {},
+    actualResponse: 'Test response',
     regressionPassed: true,
     regressionFailures: [],
     errors: [],
@@ -106,9 +119,9 @@ describe('ReportGenerator', () => {
 
       const report = generator.generateMarkdownReport(dataset, results);
       expect(report).toContain('Execution Summary');
-      expect(report).toContain('Total Executions: 2');
-      expect(report).toContain('Passed: 1');
-      expect(report).toContain('Failed: 1');
+      expect(report).toContain('Total Executions:** 2');
+      expect(report).toContain('Passed:** 1');
+      expect(report).toContain('Failed:** 1');
     });
 
     it('should include category distribution', () => {

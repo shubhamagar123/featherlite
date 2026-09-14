@@ -1,10 +1,12 @@
 import type { Application } from 'express';
 import { UserController } from '@controllers/user.controller';
+import { UserMeController } from '@controllers/user-me.controller';
 import { authenticate, rateLimiters } from '@middleware/index';
 import { createLogger } from '@utils/logger';
 
 const logger = createLogger('UserRoutes');
 const controller = new UserController();
+const meController = new UserMeController();
 
 /**
  * User Routes (Application Layer)
@@ -49,6 +51,12 @@ export function registerUserRoutes(app: Application): void {
     rateLimiters.api,
     controller.updatePreferences
   );
+
+  // GET/PATCH/DELETE /api/v1/users/me
+  // Profile summary (Profile screen), profile updates, full account deletion
+  app.get(`${baseRoute}/me`, authenticate, rateLimiters.api, meController.getMe);
+  app.patch(`${baseRoute}/me`, authenticate, rateLimiters.api, meController.updateMe);
+  app.delete(`${baseRoute}/me`, authenticate, rateLimiters.api, meController.deleteMe);
 
   logger.info('✅ User routes registered');
 }

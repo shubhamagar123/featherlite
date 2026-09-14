@@ -13,6 +13,9 @@ import { registerPresenceRoutes } from './presence.routes';
 import { registerConversationV1Routes } from './conversation.routes';
 import { registerPlannerRoutes } from './planner.routes';
 import { registerNudgeRoutes } from './nudge.routes';
+import { registerMemoriesRoutes } from './memories.routes';
+import { registerPrivacyRoutes } from './privacy.routes';
+import { registerBillingRoutes } from './billing.routes';
 import { createLogger } from '@utils/logger';
 
 const logger = createLogger('RoutesV1');
@@ -41,6 +44,7 @@ export function registerV1Routes(app: Application): void {
 
   // Data routes
   registerMemoryRoutes(app);
+  registerMemoriesRoutes(app);
   registerRelationshipRoutes(app);
   registerMomentsRoutes(app);
   registerPlannerRoutes(app);
@@ -49,5 +53,9 @@ export function registerV1Routes(app: Application): void {
   // Notification routes
   registerNotificationRoutes(app);
 
-  logger.info('✅ All v1 routes registered (14 modules, 55+ endpoints)');
+  // Privacy & Billing routes
+  registerPrivacyRoutes(app);
+  registerBillingRoutes(app);
+
+  logger.info('✅ All v1 routes registered (17 modules, 65+ endpoints)');
 }

@@ -26,6 +26,10 @@ export class MemoryRepository extends BaseRepository<Memory, MemoryCreateInput, 
     return this.findMany({ userId }, options);
   }
 
+  async countByUserId(userId: string): Promise<number> {
+    return this.count({ userId });
+  }
+
   async findByType(type: string, options?: FindManyOptions): Promise<Memory[]> {
     return this.findMany({ type }, options);
   }

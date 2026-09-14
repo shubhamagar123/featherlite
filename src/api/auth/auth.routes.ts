@@ -3,7 +3,6 @@ import { z } from 'zod';
 import {
   authenticate,
   validate,
-  commonSchemas,
   asyncHandler,
   rateLimiters,
 } from '@middleware/index';
@@ -39,8 +38,6 @@ export async function registerAuthRoutes(app: Application): Promise<void> {
     rateLimiters.auth,
     validate(createSessionSchema),
     asyncHandler(async (req: Request, res: Response) => {
-      const { token } = req.body;
-
       try {
         // TODO: Exchange Firebase token for server session
         // For now, return the token as session ID

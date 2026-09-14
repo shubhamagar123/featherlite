@@ -7,7 +7,7 @@ import {
 } from '@application/services/planner.application.service';
 import { ApplicationContext } from '@application/dtos/application.dtos';
 import { validate } from '@application/validators/application.validators';
-import { asyncHandler } from '@api/index';
+import { asyncHandler } from '@utils/asyncHandler';
 import { sendOk, sendCreated, sendNoContent } from '@utils/response';
 import { UnauthorizedError } from '@utils/error';
 import { createLogger } from '@utils/logger';
@@ -24,14 +24,19 @@ const createPlannerEventSchema = z.object({
   companionId: z.string().min(1).optional(),
   title: z.string().min(1).max(255),
   description: z.string().max(5000).optional(),
-  scheduledFor: z.coerce.date(),
+  eventDate: z.coerce.date(),
+  recurrence: z.string().max(255).optional(),
+  kaiSuggestionText: z.string().max(5000).optional(),
+  createdFrom: z.enum(['USER_STATED', 'INFERRED']).optional(),
   metadata: z.record(z.unknown()).optional(),
 });
 
 const updatePlannerEventSchema = z.object({
   title: z.string().min(1).max(255).optional(),
   description: z.string().max(5000).optional(),
-  scheduledFor: z.coerce.date().optional(),
+  eventDate: z.coerce.date().optional(),
+  recurrence: z.string().max(255).optional(),
+  kaiSuggestionText: z.string().max(5000).optional(),
   status: z.enum(['SCHEDULED', 'COMPLETED', 'CANCELLED']).optional(),
   metadata: z.record(z.unknown()).optional(),
 });

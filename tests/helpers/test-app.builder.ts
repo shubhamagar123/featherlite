@@ -5,7 +5,7 @@
 
 import express from 'express';
 import { Application } from 'express';
-import { errorHandlerApplicationMiddleware, notFoundHandlerApplicationMiddleware } from '@middleware/error-handler.application';
+import { errorHandlerMiddleware, notFoundMiddleware } from '@middleware/errorHandler';
 import { registerV1Routes } from '@routes/v1';
 
 export class TestAppBuilder {
@@ -21,17 +21,16 @@ export class TestAppBuilder {
     this.app.use(express.urlencoded({ extended: true }));
 
     // Request ID middleware
-    this.app.use((req, res, next) => {
+    this.app.use((req, _res, next) => {
       req.id = req.headers['x-request-id'] as string || `test-${Date.now()}`;
       next();
     });
   }
 
   addAuthMiddleware(): this {
-    this.app.use((req, res, next) => {
+    this.app.use((req, _res, next) => {
       // Mock authentication for testing
       if (req.headers.authorization) {
-        const token = req.headers.authorization.replace('Bearer ', '');
         (req as any).user = {
           uid: req.headers['x-test-user-id'] || 'test-user-1',
           email: 'test@example.com',
@@ -51,8 +50,8 @@ export class TestAppBuilder {
   }
 
   addErrorHandling(): this {
-    this.app.use(notFoundHandlerApplicationMiddleware);
-    this.app.use(errorHandlerApplicationMiddleware);
+    this.app.use(notFoundMiddleware);
+    this.app.use(errorHandlerMiddleware);
     return this;
   }
 

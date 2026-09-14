@@ -3,7 +3,7 @@ import { ControllerBase } from './controller.base';
 import { InteractionApplicationService } from '@application/services/interaction.application.service';
 import { ApplicationContext } from '@application/dtos/application.dtos';
 import { validate, uuidSchema } from '@application/validators/application.validators';
-import { asyncHandler } from '@api/index';
+import { asyncHandler } from '@utils/asyncHandler';
 import { z } from 'zod';
 
 /**
@@ -32,7 +32,7 @@ export class InteractionController extends ControllerBase {
         companionId: uuidSchema,
         input: z.string().min(1).max(5000),
       });
-      const { companionId, input } = validate(req.body, schema);
+      const { companionId, input } = validate<{ companionId: string; input: string }>(req.body, schema);
 
       const user = (req.user as any);
       if (!user) {
@@ -76,7 +76,7 @@ export class InteractionController extends ControllerBase {
       const schema = z.object({
         input: z.string().min(1).max(5000),
       });
-      const { input } = validate(req.body, schema);
+      const { input } = validate<{ input: string }>(req.body, schema);
 
       const user = (req.user as any);
       if (!user) {

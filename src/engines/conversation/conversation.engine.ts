@@ -14,6 +14,10 @@ import type { IMemoryService } from '@services/memory/memory.service.interface';
 import { v4 as uuid } from 'uuid';
 import type { IConversationEngine } from './interfaces/conversation-engine.interface';
 import type { ConversationTurnInput, ConversationTurnResult, ConsentResolution } from './dtos/conversation.dtos';
+import {
+  getConversationEventBus,
+  ConversationEventBus,
+} from '@services/realtime/conversation-event-bus.service';
 
 /** A candidate this engine has proposed and is waiting on the user to confirm. */
 interface PendingConsentRequest {
@@ -29,6 +33,14 @@ export interface ConversationEngineDeps {
   llmGateway: ILLMGateway;
   memoryExtractionEngine: IMemoryExtractionEngine;
   memoryService: IMemoryService;
+  /**
+   * Live conversation-state event bus (kai:speaking_start/end,
+   * video:state_change), consumed by the SSE endpoint at
+   * GET /api/v1/conversations/:id/events. Optional so existing callers/tests
+   * that construct this engine directly keep compiling — defaults to the
+   * shared singleton bus.
+   */
+  eventBus?: ConversationEventBus;
 }
 
 /**
@@ -53,8 +65,11 @@ export interface ConversationEngineDeps {
  */
 export class ConversationEngine implements IConversationEngine {
   private readonly pendingConsentByConversation = new Map<string, PendingConsentRequest>();
+  private readonly eventBus: ConversationEventBus;
 
-  constructor(private readonly deps: ConversationEngineDeps) {}
+  constructor(private readonly deps: ConversationEngineDeps) {
+    this.eventBus = deps.eventBus ?? getConversationEventBus();
+  }
 
   async sendMessage(input: ConversationTurnInput): Promise<IResult<ConversationTurnResult>> {
     return Result.tryAsync(async () => {
@@ -64,7 +79,23 @@ export class ConversationEngine implements IConversationEngine {
 
       const context = await this.assembleContext(input);
       const prompt = await this.buildPrompt(input, context);
-      let reply = await this.completeWithLLM(input, prompt);
+
+      this.eventBus.publish(conversationKey, { type: 'kai:speaking_start', data: {} });
+      this.eventBus.publish(conversationKey, {
+        type: 'video:state_change',
+        data: { state: 'speaking' },
+      });
+
+      let reply: string;
+      try {
+        reply = await this.completeWithLLM(input, prompt);
+      } finally {
+        this.eventBus.publish(conversationKey, { type: 'kai:speaking_end', data: {} });
+        this.eventBus.publish(conversationKey, {
+          type: 'video:state_change',
+          data: { state: 'idle' },
+        });
+      }
 
       const { reply: finalReply, consentQuestionAsked } = this.appendConsentQuestionIfFlagged(
         conversationKey,

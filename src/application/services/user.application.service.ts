@@ -6,6 +6,20 @@ import {
 } from '../dtos/application.dtos';
 import { ResourceNotFoundException } from '../exceptions/application.exceptions';
 import { UserRepository } from '@database/repositories/user.repository';
+import { MemoryRepository } from '@database/repositories/memory.repository';
+
+export interface UserMeDto {
+  signedIn: true;
+  activeCompanion: string;
+  addressTerm: string | null;
+  memoryCount: number;
+  accountCreatedAt: Date;
+}
+
+export interface UpdateUserMeInput {
+  activeCompanion?: string;
+  addressTerm?: string;
+}
 
 /**
  * User Application Service
@@ -17,10 +31,74 @@ import { UserRepository } from '@database/repositories/user.repository';
  */
 export class UserApplicationService extends ApplicationServiceBase {
   private readonly userRepository: UserRepository;
+  private readonly memoryRepository: MemoryRepository;
 
   constructor() {
     super('UserApplicationService');
     this.userRepository = new UserRepository();
+    this.memoryRepository = new MemoryRepository();
+  }
+
+  /**
+   * GET /v1/users/me — signed-in status, active companion, address term,
+   * memory count, account creation date. Backs the delete-confirmation
+   * screen's stats strip.
+   */
+  async getMe(context: ApplicationContext): Promise<UserMeDto> {
+    this.logStart('getMe', { userId: context.userId });
+
+    const user = await this.userRepository.findById(context.userId);
+    if (!user) {
+      throw new ResourceNotFoundException('User', context.userId);
+    }
+
+    const memoryCount = await this.memoryRepository.countByUserId(context.userId);
+
+    this.logSuccess('getMe', { userId: context.userId });
+    return {
+      signedIn: true,
+      activeCompanion: user.activeCompanion,
+      addressTerm: user.addressTerm,
+      memoryCount,
+      accountCreatedAt: user.createdAt,
+    };
+  }
+
+  /** PATCH /v1/users/me — update active_companion and/or address_term. */
+  async updateMe(context: ApplicationContext, patch: UpdateUserMeInput): Promise<UserMeDto> {
+    this.logStart('updateMe', { userId: context.userId });
+
+    const existing = await this.userRepository.findById(context.userId);
+    if (!existing) {
+      throw new ResourceNotFoundException('User', context.userId);
+    }
+
+    await this.userRepository.update(context.userId, {
+      activeCompanion: patch.activeCompanion,
+      addressTerm: patch.addressTerm,
+    } as any);
+
+    this.logSuccess('updateMe', { userId: context.userId });
+    return this.getMe(context);
+  }
+
+  /**
+   * DELETE /v1/users/me — hard-deletes the account. Every dependent table
+   * (Companion, Conversation, Memory, Moment, Notification, PlannerEvent,
+   * NudgePreference, etc.) has `onDelete: Cascade` back to User in the
+   * schema, so a single row delete here cascades everything — this is a
+   * real hard delete, not the soft delete used for a single memory.
+   */
+  async deleteMe(context: ApplicationContext): Promise<void> {
+    this.logStart('deleteMe', { userId: context.userId });
+
+    const existing = await this.userRepository.findById(context.userId);
+    if (!existing) {
+      throw new ResourceNotFoundException('User', context.userId);
+    }
+
+    await this.userRepository.hardDelete(context.userId);
+    this.logSuccess('deleteMe', { userId: context.userId });
   }
 
   /**

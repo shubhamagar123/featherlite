@@ -2,14 +2,16 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { PresenceApplicationService } from '@application/services/presence.application.service';
 import { ApplicationContext } from '@application/dtos/application.dtos';
-import { validate, uuidSchema } from '@application/validators/application.validators';
-import { asyncHandler } from '@api/index';
+import { validate } from '@application/validators/application.validators';
+import { asyncHandler } from '@utils/asyncHandler';
 import { sendOk } from '@utils/response';
 import { UnauthorizedError } from '@utils/error';
 import { createLogger } from '@utils/logger';
 
 const resolvePresenceQuerySchema = z.object({
-  companionId: uuidSchema,
+  // Companion ids are cuid()s or fixed seed keys (e.g. "companion-seed-kai"),
+  // never UUIDs — a plain non-empty string is the correct check here.
+  companionId: z.string().min(1, 'companionId is required'),
 });
 
 /**

@@ -9,6 +9,7 @@ import {
 } from '@aws-sdk/client-eventbridge';
 import { EventRegistry } from '../core/event-registry';
 import { EventDispatcher } from '../core/event-dispatcher';
+import { IEventHandler } from '../interfaces/event-handler.interface';
 
 interface EventBridgeBrokerConfig {
   region: string;
@@ -180,7 +181,7 @@ export class EventBridgeBroker extends BaseBrokerAdapter {
 
   subscribe<T extends DomainEventPayload = Record<string, any>>(
     eventType: EventType,
-    handler: any,
+    handler: IEventHandler<T>,
     priority: number = 0
   ): string {
     // Subscribe to local registry for local processing
@@ -218,7 +219,7 @@ export class EventBridgeBroker extends BaseBrokerAdapter {
     });
   }
 
-  private async dispatchLocally<_T extends DomainEventPayload>(
+  private async dispatchLocally<T extends DomainEventPayload>(
     envelope: EventEnvelope<T>
   ): Promise<void> {
     try {

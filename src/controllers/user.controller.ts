@@ -1,13 +1,12 @@
 import { Request, Response } from 'express';
 import { ControllerBase } from './controller.base';
 import { UserApplicationService } from '@application/services/user.application.service';
-import { ApplicationContext } from '@application/dtos/application.dtos';
+import { ApplicationContext, UpdateUserDto } from '@application/dtos/application.dtos';
 import {
   updateUserSchema,
-  uuidSchema,
   validate,
 } from '@application/validators/application.validators';
-import { asyncHandler } from '@api/index';
+import { asyncHandler } from '@utils/asyncHandler';
 
 /**
  * User Controller
@@ -63,7 +62,7 @@ export class UserController extends ControllerBase {
     this.logRequest('PATCH', '/api/v1/users/profile', { traceId });
 
     try {
-      const data = validate(req.body, updateUserSchema);
+      const data = validate<UpdateUserDto>(req.body, updateUserSchema);
 
       const user = (req.user as any);
       if (!user) {

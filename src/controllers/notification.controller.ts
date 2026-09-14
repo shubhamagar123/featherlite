@@ -3,7 +3,7 @@ import { ControllerBase } from './controller.base';
 import { NotificationApplicationService } from '@application/services/notification.application.service';
 import { ApplicationContext } from '@application/dtos/application.dtos';
 import { validate, uuidSchema } from '@application/validators/application.validators';
-import { asyncHandler } from '@api/index';
+import { asyncHandler } from '@utils/asyncHandler';
 import { z } from 'zod';
 
 /**
@@ -130,7 +130,7 @@ export class NotificationController extends ControllerBase {
         token: z.string().min(1),
         platform: z.string().default('web'),
       });
-      const { token, platform } = validate(req.body, schema);
+      const { token, platform } = validate<{ token: string; platform: string }>(req.body, schema);
 
       const user = (req.user as any);
       if (!user) {

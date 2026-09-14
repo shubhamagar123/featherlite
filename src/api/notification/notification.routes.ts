@@ -70,7 +70,7 @@ export async function registerNotificationRoutes(
     validate(listNotificationsSchema),
     asyncHandler(async (req: Request, res: Response) => {
       const userId = req.user!.uid;
-      const { page = 1, limit = 20, unreadOnly, type } = req.query as Record<
+      const { page = 1, limit = 20 } = req.query as Record<
         string,
         any
       >;

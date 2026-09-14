@@ -10,7 +10,10 @@ export interface PlannerEventDto {
   companionId: string | null;
   title: string;
   description: string | null;
-  scheduledFor: Date;
+  eventDate: Date;
+  recurrence: string | null;
+  kaiSuggestionText: string | null;
+  createdFrom: 'USER_STATED' | 'INFERRED';
   status: string;
   metadata: Record<string, unknown> | null;
   createdAt: Date;
@@ -21,14 +24,19 @@ export interface CreatePlannerEventInput {
   companionId?: string;
   title: string;
   description?: string;
-  scheduledFor: Date;
+  eventDate: Date;
+  recurrence?: string;
+  kaiSuggestionText?: string;
+  createdFrom?: 'USER_STATED' | 'INFERRED';
   metadata?: Record<string, unknown>;
 }
 
 export interface UpdatePlannerEventInput {
   title?: string;
   description?: string;
-  scheduledFor?: Date;
+  eventDate?: Date;
+  recurrence?: string;
+  kaiSuggestionText?: string;
   status?: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
   metadata?: Record<string, unknown>;
 }
@@ -56,7 +64,10 @@ export class PlannerApplicationService extends ApplicationServiceBase {
       ...(input.companionId && { companion: { connect: { id: input.companionId } } }),
       title: input.title,
       description: input.description,
-      scheduledFor: input.scheduledFor,
+      eventDate: input.eventDate,
+      recurrence: input.recurrence,
+      kaiSuggestionText: input.kaiSuggestionText,
+      createdFrom: input.createdFrom ?? 'USER_STATED',
       metadata: input.metadata ? JSON.stringify(input.metadata) : undefined,
     } as any);
 
@@ -67,7 +78,7 @@ export class PlannerApplicationService extends ApplicationServiceBase {
   async list(context: ApplicationContext, limit = 50): Promise<PlannerEventDto[]> {
     const events = await this.repository.findByUserId(context.userId, {
       take: limit,
-      orderBy: { scheduledFor: 'asc' },
+      orderBy: { eventDate: 'asc' },
     });
     return events.map((e) => this.toDto(e));
   }
@@ -87,7 +98,9 @@ export class PlannerApplicationService extends ApplicationServiceBase {
     const updated = await this.repository.update(eventId, {
       title: patch.title,
       description: patch.description,
-      scheduledFor: patch.scheduledFor,
+      eventDate: patch.eventDate,
+      recurrence: patch.recurrence,
+      kaiSuggestionText: patch.kaiSuggestionText,
       status: patch.status,
       metadata: patch.metadata ? JSON.stringify(patch.metadata) : undefined,
     } as any);
@@ -121,7 +134,10 @@ export class PlannerApplicationService extends ApplicationServiceBase {
       companionId: event.companionId,
       title: event.title,
       description: event.description,
-      scheduledFor: event.scheduledFor,
+      eventDate: event.eventDate,
+      recurrence: event.recurrence,
+      kaiSuggestionText: event.kaiSuggestionText,
+      createdFrom: event.createdFrom,
       status: event.status,
       metadata: event.metadata ? JSON.parse(event.metadata) : null,
       createdAt: event.createdAt,

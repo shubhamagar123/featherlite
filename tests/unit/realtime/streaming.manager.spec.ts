@@ -88,7 +88,7 @@ describe('StreamingManager', () => {
   describe('addToken', () => {
     it('should add a single token to a stream', () => {
       const stream = manager.startStream('user1', 'session1', 'interaction1', 'companion1');
-      const updated = manager.addToken(stream.streamId, { content: 'hello', timestamp: new Date() });
+      const updated = manager.addToken(stream.streamId, { index: 0, content: 'hello', timestamp: new Date() });
 
       expect(updated).toBeDefined();
       expect(updated!.tokens).toHaveLength(1);
@@ -98,15 +98,15 @@ describe('StreamingManager', () => {
 
     it('should increment token index', () => {
       const stream = manager.startStream('user1', 'session1', 'interaction1', 'companion1');
-      manager.addToken(stream.streamId, { content: 'hello', timestamp: new Date() });
-      const updated = manager.addToken(stream.streamId, { content: 'world' });
+      manager.addToken(stream.streamId, { index: 0, content: 'hello', timestamp: new Date() });
+      const updated = manager.addToken(stream.streamId, { index: 0, content: 'world', timestamp: new Date() });
 
       expect(updated!.tokens[0].index).toBe(0);
       expect(updated!.tokens[1].index).toBe(1);
     });
 
     it('should return null if stream does not exist', () => {
-      const updated = manager.addToken('non-existent-id', { content: 'hello', timestamp: new Date() });
+      const updated = manager.addToken('non-existent-id', { index: 0, content: 'hello', timestamp: new Date() });
 
       expect(updated).toBeNull();
     });
@@ -114,7 +114,7 @@ describe('StreamingManager', () => {
     it('should preserve token timestamp if provided', () => {
       const stream = manager.startStream('user1', 'session1', 'interaction1', 'companion1');
       const timestamp = new Date('2026-07-10T12:00:00Z');
-      const updated = manager.addToken(stream.streamId, { content: 'hello', timestamp });
+      const updated = manager.addToken(stream.streamId, { index: 0, content: 'hello', timestamp });
 
       expect(updated!.tokens[0].timestamp).toEqual(timestamp);
     });
@@ -122,7 +122,7 @@ describe('StreamingManager', () => {
     it('should set token timestamp to current time if not provided', () => {
       const stream = manager.startStream('user1', 'session1', 'interaction1', 'companion1');
       const before = new Date();
-      manager.addToken(stream.streamId, { content: 'hello', timestamp: new Date() });
+      manager.addToken(stream.streamId, { index: 0, content: 'hello', timestamp: new Date() });
       const after = new Date();
 
       const token = manager.getStream(stream.streamId)!.tokens[0];
@@ -134,7 +134,11 @@ describe('StreamingManager', () => {
   describe('addTokens', () => {
     it('should add multiple tokens to a stream', () => {
       const stream = manager.startStream('user1', 'session1', 'interaction1', 'companion1');
-      const tokens = [{ content: 'hello', timestamp: new Date() }, { content: ' ' }, { content: 'world' }];
+      const tokens = [
+        { index: 0, content: 'hello', timestamp: new Date() },
+        { index: 0, content: ' ', timestamp: new Date() },
+        { index: 0, content: 'world', timestamp: new Date() },
+      ];
       const updated = manager.addTokens(stream.streamId, tokens);
 
       expect(updated!.tokens).toHaveLength(3);
@@ -145,28 +149,28 @@ describe('StreamingManager', () => {
       const MAX_TOKENS_PER_STREAM = 100000;
       const stream = manager.startStream('user1', 'session1', 'interaction1', 'companion1');
 
-      const tokens = Array(MAX_TOKENS_PER_STREAM).fill({ content: 'x', timestamp: new Date() });
+      const tokens = Array(MAX_TOKENS_PER_STREAM).fill({ index: 0, content: 'x', timestamp: new Date() });
       manager.addTokens(stream.streamId, tokens);
 
       expect(() => {
-        manager.addTokens(stream.streamId, [{ content: 'over-limit', timestamp: new Date() }]);
+        manager.addTokens(stream.streamId, [{ index: 0, content: 'over-limit', timestamp: new Date() }]);
       }).toThrow('Stream token limit exceeded');
     });
 
     it('should reject when adding tokens would exceed limit', () => {
       const stream = manager.startStream('user1', 'session1', 'interaction1', 'companion1');
 
-      const tokens99k = Array(99000).fill({ content: 'x', timestamp: new Date() });
+      const tokens99k = Array(99000).fill({ index: 0, content: 'x', timestamp: new Date() });
       manager.addTokens(stream.streamId, tokens99k);
 
-      const tokens2k = Array(2000).fill({ content: 'x', timestamp: new Date() });
+      const tokens2k = Array(2000).fill({ index: 0, content: 'x', timestamp: new Date() });
       expect(() => {
         manager.addTokens(stream.streamId, tokens2k);
       }).toThrow('Stream token limit exceeded');
     });
 
     it('should return null if stream does not exist', () => {
-      const tokens = [{ content: 'hello', timestamp: new Date() }];
+      const tokens = [{ index: 0, content: 'hello', timestamp: new Date() }];
       const updated = manager.addTokens('non-existent-id', tokens);
 
       expect(updated).toBeNull();
@@ -239,9 +243,9 @@ describe('StreamingManager', () => {
     it('should concatenate all token content', () => {
       const stream = manager.startStream('user1', 'session1', 'interaction1', 'companion1');
       manager.addTokens(stream.streamId, [
-        { content: 'Hello', timestamp: new Date() },
-        { content: ' ', timestamp: new Date() },
-        { content: 'World', timestamp: new Date() },
+        { index: 0, content: 'Hello', timestamp: new Date() },
+        { index: 0, content: ' ', timestamp: new Date() },
+        { index: 0, content: 'World', timestamp: new Date() },
       ]);
 
       const content = manager.getStreamContent(stream.streamId);
@@ -265,7 +269,7 @@ describe('StreamingManager', () => {
   describe('getStreamTokens', () => {
     it('should return copy of tokens array', () => {
       const stream = manager.startStream('user1', 'session1', 'interaction1', 'companion1');
-      manager.addToken(stream.streamId, { content: 'hello', timestamp: new Date() });
+      manager.addToken(stream.streamId, { index: 0, content: 'hello', timestamp: new Date() });
 
       const tokens = manager.getStreamTokens(stream.streamId);
       expect(tokens).toHaveLength(1);
@@ -274,7 +278,7 @@ describe('StreamingManager', () => {
 
     it('should not expose original tokens array for modification', () => {
       const stream = manager.startStream('user1', 'session1', 'interaction1', 'companion1');
-      manager.addToken(stream.streamId, { content: 'hello', timestamp: new Date() });
+      manager.addToken(stream.streamId, { index: 0, content: 'hello', timestamp: new Date() });
 
       const tokens = manager.getStreamTokens(stream.streamId);
       tokens.pop();
@@ -389,7 +393,7 @@ describe('StreamingManager', () => {
     it('should return all streams for an interaction', () => {
       const stream1 = manager.startStream('user1', 'session1', 'interaction1', 'companion1');
       const stream2 = manager.startStream('user1', 'session1', 'interaction1', 'companion1');
-      const stream3 = manager.startStream('user1', 'session1', 'interaction2', 'companion1');
+      manager.startStream('user1', 'session1', 'interaction2', 'companion1');
 
       const interaction1Streams = manager.getInteractionStreams('interaction1');
       expect(interaction1Streams).toHaveLength(2);
@@ -488,7 +492,7 @@ describe('StreamingManager', () => {
 
     it('should prevent unbounded token accumulation', () => {
       const stream = manager.startStream('user1', 'session1', 'interaction1', 'companion1');
-      const tokens = Array(100001).fill({ content: 'x' });
+      const tokens = Array(100001).fill({ index: 0, content: 'x' });
 
       expect(() => {
         manager.addTokens(stream.streamId, tokens);

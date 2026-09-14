@@ -57,13 +57,7 @@ export async function mountApi(app: Application): Promise<void> {
  * Usage:
  * app.get('/endpoint', authenticate, validate(...), asyncHandler(async (req, res) => {...}))
  */
-export function asyncHandler(
-  fn: (req: any, res: any, next?: any) => Promise<any>
-) {
-  return (req: any, res: any, next: any) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
-  };
-}
+export { asyncHandler } from '@utils/asyncHandler';
 
 /**
  * API Response wrapper for consistent response format

@@ -4,7 +4,10 @@ import {
   QueryResponseDto,
 } from '../dtos/application.dtos';
 import { ResourceNotFoundException } from '../exceptions/application.exceptions';
-import { InteractionEngine } from '@engines/interaction/interaction.engine';
+import { getInteractionOrchestrator } from '@engines/interaction/interaction-orchestrator.factory';
+import { InteractionType, ExchangeDirection } from '@engines/interaction/enums/interaction.enums';
+import { TextChatInteraction } from '@engines/interaction/dtos/interaction.dtos';
+import { getContextEngine } from '@engines/context';
 import { CompanionRepository } from '@database/repositories/companion.repository';
 import { ConversationRepository } from '@database/repositories/conversation.repository';
 
@@ -14,15 +17,56 @@ import { ConversationRepository } from '@database/repositories/conversation.repo
  * IMPORTANT: Business logic layer
  */
 export class InteractionApplicationService extends ApplicationServiceBase {
-  private readonly interactionEngine: InteractionEngine;
   private readonly companionRepository: CompanionRepository;
   private readonly conversationRepository: ConversationRepository;
 
   constructor() {
     super('InteractionApplicationService');
-    this.interactionEngine = new InteractionEngine();
     this.companionRepository = new CompanionRepository();
     this.conversationRepository = new ConversationRepository();
+  }
+
+  /**
+   * Route a text-chat interaction through the InteractionOrchestrator,
+   * assembling the InteractionContextDTO it requires via the Context Engine
+   * (the same single collaborator PresenceApplicationService uses).
+   */
+  private async processTextChat(
+    context: ApplicationContext,
+    companionId: string,
+    input: string
+  ): Promise<{ id: string; response: string; duration: number }> {
+    const contextResult = await getContextEngine().assembleContext({
+      userId: context.userId,
+      companionId,
+    });
+    const interactionContext = contextResult.getValueOrThrow();
+
+    const interaction: TextChatInteraction = {
+      id: `int_${Date.now()}`,
+      type: InteractionType.TEXT_CHAT,
+      sessionId: `session_${context.userId}_${companionId}`,
+      userId: context.userId,
+      companionId,
+      timestamp: new Date(),
+      message: input,
+      direction: ExchangeDirection.USER_TO_COMPANION,
+    };
+
+    const result = await getInteractionOrchestrator().processInteraction({
+      userId: context.userId,
+      companionId,
+      interaction,
+      context: interactionContext,
+    });
+    const processed = result.getValueOrThrow();
+
+    return {
+      id: processed.interactionId,
+      response:
+        typeof processed.response === 'string' ? processed.response : JSON.stringify(processed.response ?? ''),
+      duration: processed.estimatedDuration || 0,
+    };
   }
 
   /**
@@ -42,11 +86,7 @@ export class InteractionApplicationService extends ApplicationServiceBase {
         throw new ResourceNotFoundException('Companion', companionId);
       }
 
-      const interaction = await this.interactionEngine.handleInteraction(
-        context.userId,
-        companionId,
-        input
-      );
+      const interaction = await this.processTextChat(context, companionId, input);
 
       this.logSuccess('startInteraction', { userId: context.userId, companionId });
 
@@ -81,11 +121,7 @@ export class InteractionApplicationService extends ApplicationServiceBase {
         throw new ResourceNotFoundException('Conversation', conversationId);
       }
 
-      const interaction = await this.interactionEngine.continueInteraction(
-        context.userId,
-        conversationId,
-        input
-      );
+      const interaction = await this.processTextChat(context, conversation.companionId, input);
 
       this.logSuccess('continueInteraction', { userId: context.userId, conversationId });
 
@@ -120,10 +156,12 @@ export class InteractionApplicationService extends ApplicationServiceBase {
         throw new ResourceNotFoundException('Conversation', conversationId);
       }
 
-      const messages = await this.conversationRepository.findByConversationId(
+      const withMessages = await this.conversationRepository.findWithMessagesAndPagination(
         conversationId,
-        { limit }
+        0,
+        limit
       );
+      const messages = withMessages?.messages || [];
 
       this.logSuccess('getConversationHistory', { userId: context.userId, conversationId });
 

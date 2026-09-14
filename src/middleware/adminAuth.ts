@@ -26,7 +26,7 @@ declare global {
  */
 export async function adminAuth(
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): Promise<void> {
   try {
@@ -100,14 +100,13 @@ export async function adminAuth(
     }
   } catch (error) {
     if (error instanceof AppError) {
-      throw error;
+      next(error);
+      return;
     }
 
     logger.error({ error }, 'Admin authentication error');
-    throw new AppError(
-      500,
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      'Authentication failed'
+    next(
+      new AppError(500, ErrorCode.INTERNAL_SERVER_ERROR, 'Authentication failed')
     );
   }
 }

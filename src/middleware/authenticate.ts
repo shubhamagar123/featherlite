@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import * as admin from 'firebase-admin';
+import { FirebaseAuthError } from 'firebase-admin/auth';
 import { logger } from '@utils/logger';
 import { AppError, ErrorCode } from '@utils/error';
 import { getRedisClient } from '@infra/redis/redis.provider';
@@ -27,7 +28,7 @@ declare global {
  */
 export async function authenticate(
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): Promise<void> {
   try {
@@ -51,6 +52,25 @@ export async function authenticate(
     }
 
     const idToken = parts[1];
+
+    // Test-only bypass, mirroring the stub-Redis-client pattern in
+    // redis.provider.ts: lets integration tests exercise real routes without
+    // a live Firebase project. Requires NODE_ENV=test (never set in
+    // production) AND an explicit x-test-user-id header — a request with
+    // neither still goes through real Firebase verification.
+    if (process.env.NODE_ENV === 'test') {
+      const testUserId = req.headers['x-test-user-id'];
+      if (testUserId) {
+        req.user = {
+          uid: String(testUserId),
+          email: 'test@example.com',
+          emailVerified: true,
+          customClaims: {},
+        };
+        next();
+        return;
+      }
+    }
 
     try {
       const decodedToken = await admin.auth().verifyIdToken(idToken);
@@ -83,7 +103,7 @@ export async function authenticate(
 
       next();
     } catch (error) {
-      if (error instanceof admin.auth.AuthError) {
+      if (error instanceof FirebaseAuthError) {
         throw new AppError(
           401,
           ErrorCode.INVALID_TOKEN,
@@ -95,14 +115,13 @@ export async function authenticate(
     }
   } catch (error) {
     if (error instanceof AppError) {
-      throw error;
+      next(error);
+      return;
     }
 
     logger.error({ error }, 'Authentication error');
-    throw new AppError(
-      500,
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      'Authentication failed'
+    next(
+      new AppError(500, ErrorCode.INTERNAL_SERVER_ERROR, 'Authentication failed')
     );
   }
 }

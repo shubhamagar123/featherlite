@@ -21,7 +21,7 @@ describe('SocketGateway', () => {
         },
         query: {},
         address: '127.0.0.1',
-      },
+      } as Socket['handshake'],
       id: 'socket-123',
       connected: true,
       once: jest.fn(),

@@ -4,6 +4,8 @@
  */
 
 import { InteractionApplicationService } from '@application/services/interaction.application.service';
+import { ApplicationContext } from '@application/dtos/application.dtos';
+import { redisClientProvider } from '@infra/redis/redis-client.provider';
 import { PrismaClient, User, UserRole, UserStatus, Companion, CompanionStatus } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -13,6 +15,16 @@ describe('InteractionApplicationService', () => {
   let testUser: User;
   let testCompanion: Companion;
 
+  const buildContext = (overrides: Partial<ApplicationContext> = {}): ApplicationContext => ({
+    userId: testUser.id,
+    userEmail: testUser.email,
+    userRoles: [],
+    requestId: uuidv4(),
+    traceId: uuidv4(),
+    timestamp: new Date(),
+    ...overrides,
+  });
+
   beforeAll(async () => {
     db = new PrismaClient({
       datasources: {
@@ -21,24 +33,31 @@ describe('InteractionApplicationService', () => {
         },
       },
     });
-    service = new InteractionApplicationService(db);
+    // The InteractionOrchestrator's session storage needs the Redis client
+    // pool a real server bootstrap would initialize at startup.
+    await redisClientProvider.initialize();
+    service = new InteractionApplicationService();
   });
 
   beforeEach(async () => {
     testUser = await db.user.create({
       data: {
         id: uuidv4(),
-        email: 'interaction@example.com',
-        username: 'interactionuser',
+        email: `interaction-${uuidv4()}@example.com`,
+        username: `interactionuser-${uuidv4().slice(0, 8)}`,
         firebaseUid: `firebase-${uuidv4()}`,
         role: UserRole.USER,
         status: UserStatus.ACTIVE,
       },
     });
 
+    // The Context Engine's CompanionContextProvider resolves companion state
+    // from a fixed, seeded CompanionRegistry (Kai/Kia), not from arbitrary DB
+    // rows — so the FK'd Companion row must use one of those seeded IDs for
+    // startInteraction/continueInteraction to succeed end-to-end.
     testCompanion = await db.companion.create({
       data: {
-        id: uuidv4(),
+        id: 'companion-seed-kai',
         userId: testUser.id,
         name: 'Test Companion',
         description: 'A test companion',
@@ -56,68 +75,26 @@ describe('InteractionApplicationService', () => {
 
   afterAll(async () => {
     await db.$disconnect();
+    await redisClientProvider.shutdown();
   });
 
   describe('startInteraction', () => {
-    it('should start new interaction', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
+    it('should start a new interaction and return a QueryResponseDto', async () => {
+      const context = buildContext();
 
       const result = await service.startInteraction(context, testCompanion.id, 'Hello!');
 
-      expect(result.isSuccess()).toBe(true);
-      expect(result.value).toHaveProperty('conversationId');
-      expect(result.value).toHaveProperty('message');
-      expect(result.value).toHaveProperty('response');
-    });
-
-    it('should create conversation with initial message', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
-
-      const result = await service.startInteraction(context, testCompanion.id, 'Test message');
-
-      const conversationId = (result.value as any).conversationId;
-      const conversation = await db.conversation.findUnique({
-        where: { id: conversationId },
-      });
-
-      expect(conversation).toBeDefined();
-      expect(conversation?.userId).toBe(testUser.id);
-      expect(conversation?.companionId).toBe(testCompanion.id);
-    });
-
-    it('should include response data', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
-
-      const result = await service.startInteraction(context, testCompanion.id, 'Hello!');
-
-      expect(result.value).toHaveProperty('message.content');
-      expect(result.value).toHaveProperty('message.role');
-      expect(result.value).toHaveProperty('response.content');
-      expect(result.value).toHaveProperty('response.role');
+      expect(result).toHaveProperty('id');
+      expect(result).toHaveProperty('companionId', testCompanion.id);
+      expect(result).toHaveProperty('input', 'Hello!');
+      expect(result).toHaveProperty('response');
+      expect(typeof result.duration).toBe('number');
     });
 
     it('should fail for non-existent companion', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
+      const context = buildContext();
 
-      const result = await service.startInteraction(context, uuidv4(), 'Hello!');
-
-      expect(result.isFailure()).toBe(true);
+      await expect(service.startInteraction(context, uuidv4(), 'Hello!')).rejects.toThrow();
     });
   });
 
@@ -136,43 +113,44 @@ describe('InteractionApplicationService', () => {
       conversationId = conversation.id;
     });
 
-    it('should continue existing conversation', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
+    it('should continue an existing conversation', async () => {
+      const context = buildContext();
 
       const result = await service.continueInteraction(context, conversationId, 'How are you?');
 
-      expect(result.isSuccess()).toBe(true);
-      expect(result.value).toHaveProperty('conversationId', conversationId);
-      expect(result.value).toHaveProperty('message');
-      expect(result.value).toHaveProperty('response');
+      expect(result).toHaveProperty('companionId', testCompanion.id);
+      expect(result).toHaveProperty('input', 'How are you?');
+      expect(result).toHaveProperty('response');
     });
 
-    it('should preserve conversation ID', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
+    it('should return the companion tied to the conversation', async () => {
+      const context = buildContext();
 
       const result = await service.continueInteraction(context, conversationId, 'How are you?');
 
-      expect((result.value as any).conversationId).toBe(conversationId);
+      expect(result.companionId).toBe(testCompanion.id);
     });
 
-    it('should return 404 for non-existent conversation', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
+    it('should fail for a non-existent conversation', async () => {
+      const context = buildContext();
 
-      const result = await service.continueInteraction(context, uuidv4(), 'Hello!');
+      await expect(service.continueInteraction(context, uuidv4(), 'Hello!')).rejects.toThrow();
+    });
 
-      expect(result.isFailure()).toBe(true);
+    it("should fail for a conversation belonging to a different user", async () => {
+      const otherUser = await db.user.create({
+        data: {
+          id: uuidv4(),
+          email: `interaction-other-${uuidv4()}@example.com`,
+          username: `interactionother-${uuidv4().slice(0, 8)}`,
+          firebaseUid: `firebase-${uuidv4()}`,
+          role: UserRole.USER,
+          status: UserStatus.ACTIVE,
+        },
+      });
+      const context = buildContext({ userId: otherUser.id, userEmail: otherUser.email });
+
+      await expect(service.continueInteraction(context, conversationId, 'Hello!')).rejects.toThrow();
     });
   });
 
@@ -191,74 +169,38 @@ describe('InteractionApplicationService', () => {
       conversationId = conversation.id;
     });
 
-    it('should return conversation history', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
+    it('should return conversation history as an array', async () => {
+      const context = buildContext();
 
       const result = await service.getConversationHistory(context, conversationId);
 
-      expect(result.isSuccess()).toBe(true);
-      expect(result.value).toHaveProperty('conversationId');
-      expect(result.value).toHaveProperty('messages');
-      expect(Array.isArray((result.value as any).messages)).toBe(true);
+      expect(Array.isArray(result)).toBe(true);
     });
 
-    it('should preserve message order', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
+    it('should preserve message order when messages exist', async () => {
+      const context = buildContext();
 
       const result = await service.getConversationHistory(context, conversationId);
 
-      const messages = (result.value as any).messages;
-      for (let i = 1; i < messages.length; i++) {
-        const prevTime = new Date(messages[i - 1].createdAt).getTime();
-        const currTime = new Date(messages[i].createdAt).getTime();
+      for (let i = 1; i < result.length; i++) {
+        const prevTime = new Date(result[i - 1].createdAt).getTime();
+        const currTime = new Date(result[i].createdAt).getTime();
         expect(currTime).toBeGreaterThanOrEqual(prevTime);
       }
     });
 
-    it('should return 404 for non-existent conversation', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
+    it('should fail for a non-existent conversation', async () => {
+      const context = buildContext();
 
-      const result = await service.getConversationHistory(context, uuidv4());
-
-      expect(result.isFailure()).toBe(true);
+      await expect(service.getConversationHistory(context, uuidv4())).rejects.toThrow();
     });
   });
 
   describe('Error Handling', () => {
-    it('should handle empty message', async () => {
-      const context = {
-        userId: testUser.id,
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
-
-      const result = await service.startInteraction(context, testCompanion.id, '');
-
-      expect([true, false]).toContain(result.isSuccess());
-    });
-
     it('should handle invalid context user ID', async () => {
-      const context = {
-        userId: '',
-        email: testUser.email,
-        reqId: uuidv4(),
-      };
+      const context = buildContext({ userId: '' });
 
-      const result = await service.startInteraction(context, testCompanion.id, 'Hello!');
-
-      expect(result.isFailure()).toBe(true);
+      await expect(service.startInteraction(context, testCompanion.id, 'Hello!')).rejects.toThrow();
     });
   });
 });

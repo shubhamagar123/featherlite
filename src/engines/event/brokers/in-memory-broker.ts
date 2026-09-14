@@ -4,6 +4,7 @@ import { EventEnvelope, DomainEventPayload, EventRetryPolicy } from '../dto/even
 import { EventType, EventDispatchMode, EventStatus } from '../enums/event.enums';
 import { EventRegistry } from '../core/event-registry';
 import { EventDispatcher } from '../core/event-dispatcher';
+import { IEventHandler } from '../interfaces/event-handler.interface';
 
 /**
  * In-memory broker adapter (default, reference implementation).
@@ -90,7 +91,7 @@ export class InMemoryBroker extends BaseBrokerAdapter {
     });
   }
 
-  async publishBatch<_T extends DomainEventPayload = Record<string, any>>(
+  async publishBatch<T extends DomainEventPayload = Record<string, any>>(
     envelopes: EventEnvelope<T>[],
     mode: EventDispatchMode = EventDispatchMode.SYNC
   ): Promise<IResult<void>> {
@@ -135,7 +136,7 @@ export class InMemoryBroker extends BaseBrokerAdapter {
 
   subscribe<T extends DomainEventPayload = Record<string, any>>(
     eventType: EventType,
-    handler: any,
+    handler: IEventHandler<T>,
     priority: number = 0
   ): string {
     const subscriptionId = this.registry.register(eventType, handler, priority);

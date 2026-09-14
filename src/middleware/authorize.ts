@@ -11,7 +11,7 @@ export type UserRole = 'user' | 'admin' | 'moderator';
  * Usage: app.get('/admin-route', authenticate, authorize('admin'), handler)
  */
 export function authorize(...allowedRoles: UserRole[]) {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user) {
       throw new AppError(
         401,
@@ -65,7 +65,7 @@ export function authorize(...allowedRoles: UserRole[]) {
 export function requireOwnership(
   getResourceOwnerId: (req: Request) => string | undefined
 ) {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user) {
       throw new AppError(
         401,

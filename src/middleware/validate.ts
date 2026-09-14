@@ -25,7 +25,7 @@ export interface ValidationSchemas {
 export function validate(schemas: ValidationSchemas) {
   return async (
     req: Request,
-    res: Response,
+    _res: Response,
     next: NextFunction
   ): Promise<void> => {
     try {
@@ -99,14 +99,13 @@ export function validate(schemas: ValidationSchemas) {
       next();
     } catch (error) {
       if (error instanceof AppError) {
-        throw error;
+        next(error);
+        return;
       }
 
       logger.error({ error }, 'Validation middleware error');
-      throw new AppError(
-        500,
-        ErrorCode.INTERNAL_SERVER_ERROR,
-        'Validation failed'
+      next(
+        new AppError(500, ErrorCode.INTERNAL_SERVER_ERROR, 'Validation failed')
       );
     }
   };

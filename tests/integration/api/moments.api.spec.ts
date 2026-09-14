@@ -84,7 +84,7 @@ describe('Moments API Endpoints', () => {
         .expect(200);
 
       const now = Date.now();
-      res.body.data.moments.forEach(moment => {
+      res.body.data.moments.forEach((moment: any) => {
         const scheduledTime = new Date(moment.scheduledAt).getTime();
         expect(scheduledTime).toBeGreaterThanOrEqual(now);
       });
@@ -281,7 +281,7 @@ describe('Moments API Endpoints', () => {
         .set('x-test-user-id', 'test-user-1')
         .expect(200);
 
-      res.body.data.callbacks.forEach(callback => {
+      res.body.data.callbacks.forEach((callback: any) => {
         expect(callback.status).toBe('pending');
       });
     });

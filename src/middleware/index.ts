@@ -21,4 +21,4 @@ export { securityHeaders, corsMiddleware, requestIdMiddleware } from './security
 export { csrfMiddleware, generateCsrfToken, disableCsrf } from './csrf';
 
 // Async Handler (from API module for convenience)
-export { asyncHandler } from '@api/index';
+export { asyncHandler } from '@utils/asyncHandler';

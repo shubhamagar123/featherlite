@@ -179,10 +179,14 @@ enum PlannerEventStatus {
   CANCELLED
 }
 
-enum NudgeFrequency {
-  IMMEDIATE
-  DAILY
-  WEEKLY
+enum PlannerEventSource {
+  USER_STATED
+  INFERRED
+}
+
+enum BillingTier {
+  FREE
+  PREMIUM
 }
 
 // ============================================================================
@@ -217,6 +221,13 @@ model User {
   pushNotificationsEnabled Boolean @default(true)
   privacyLevel String @default("friends") // public, friends, private
 
+  // Profile screen
+  activeCompanion String @default("kai") // seed key of the companion currently in use, e.g. "kai" | "kia"
+  addressTerm String? // what the companion calls the user, e.g. "babe", "friend"
+
+  // Billing
+  billingTier BillingTier @default(FREE)
+
   // Relationships
   companions Companion[]
   relationships Relationship[]
@@ -229,7 +240,7 @@ model User {
   voiceSessions VoiceSession[]
   analyticsEvents AnalyticsEvent[]
   plannerEvents PlannerEvent[]
-  nudgePreferences NudgePreference[]
+  nudgePreference NudgePreference?
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -821,7 +832,10 @@ model PlannerEvent {
 
   title String
   description String? @db.Text
-  scheduledFor DateTime
+  eventDate DateTime
+  recurrence String? // e.g. "daily", "weekly", "monthly" — nullable, one-off by default
+  kaiSuggestionText String? @db.Text // What Kai said when proposing this event, if inferred
+  createdFrom PlannerEventSource @default(USER_STATED)
   status PlannerEventStatus @default(SCHEDULED)
 
   metadata String? @db.Text // JSON for extension
@@ -832,35 +846,34 @@ model PlannerEvent {
 
   @@index([userId])
   @@index([companionId])
-  @@index([scheduledFor])
+  @@index([eventDate])
   @@index([status])
   @@index([deletedAt])
 }
 
 // ============================================================================
 // NUDGE PREFERENCE TABLE
-// Purpose: Per-user, per-nudge-type opt-in/out and delivery preferences
-// (e.g. "daily check-in nudges: on, quiet hours 22:00-08:00").
-// Relationships: Many preference rows per user, one per nudgeType.
+// Purpose: One row per user holding a simple boolean toggle per nudge
+// category (care_hydration, people_to_remember, checking_in) — matching the
+// three categories on the product's Notification Preferences screen. No
+// frequency/quiet-hours sub-settings in this pass.
+// Relationships: Exactly one preference row per user.
 // ============================================================================
 
 model NudgePreference {
   id String @id @default(cuid())
 
-  userId String
+  userId String @unique
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  nudgeType String // e.g. "daily_checkin", "memory_followup"
-  enabled Boolean @default(true)
-  frequency NudgeFrequency @default(DAILY)
-  quietHoursStart String? // "HH:mm", local to the user's timezone
-  quietHoursEnd String? // "HH:mm"
+  careHydration Boolean @default(true)
+  peopleToRemember Boolean @default(true)
+  checkingIn Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime? // Soft delete
 
-  @@unique([userId, nudgeType])
   @@index([userId])
   @@index([deletedAt])
 }

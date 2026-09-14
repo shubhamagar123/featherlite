@@ -14,6 +14,19 @@ const controller = new ConversationController();
 export function registerConversationV1Routes(app: Application): void {
   const baseRoute = '/api/v1/conversations';
 
+  // POST /api/v1/conversations
+  // Start a new conversation, returns its id
+  app.post(baseRoute, authenticate, rateLimiters.api, controller.startConversation);
+
+  // GET /api/v1/conversations/:id/messages
+  // Paginated message history
+  app.get(
+    `${baseRoute}/:id/messages`,
+    authenticate,
+    rateLimiters.api,
+    controller.getMessages
+  );
+
   // POST /api/v1/conversations/:id/messages
   // Send a message on an existing conversation (delegates to Conversation Engine)
   app.post(
